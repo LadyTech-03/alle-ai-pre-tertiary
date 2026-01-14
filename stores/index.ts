@@ -156,7 +156,7 @@ interface SelectedModelsStore {
     video: string[];
   };
   inactiveModels: string[];
-  setInactiveModels: (models: string[]) => void; 
+  setInactiveModels: (models: string[]) => void;
   tempSelectedModels: string[];
   setTempSelectedModels: (models: string[]) => void;
   saveSelectedModels: (type: 'chat' | 'image' | 'audio' | 'video') => void;
@@ -177,7 +177,7 @@ export const useSelectedModelsStore = create<SelectedModelsStore>((set, get) => 
     video: [],
   },
   inactiveModels: [],
-  setInactiveModels: (models) => set({ 
+  setInactiveModels: (models) => set({
     inactiveModels: models,
     lastUpdate: Date.now()
   }),
@@ -203,12 +203,12 @@ export const useSelectedModelsStore = create<SelectedModelsStore>((set, get) => 
   getSelectedModelNames: (type) => {
     const state = get();
     const modelsStore = useModelsStore.getState();
-    
+
     const modelList = type === 'chat' ? modelsStore.chatModels
       : type === 'image' ? modelsStore.imageModels
-      : type === 'audio' ? modelsStore.audioModels
-      : modelsStore.videoModels;
-    
+        : type === 'audio' ? modelsStore.audioModels
+          : modelsStore.videoModels;
+
     return state.selectedModels[type]
       .map(modelUid => {
         const model = modelList.find(m => m.model_uid === modelUid);
@@ -248,7 +248,7 @@ export const useGeneratedImagesStore = create<GeneratedImagesStore>()(
         images: typeof images === 'function' ? images(state.images) : images
       })),
       updateImage: (modelId, updates) => set((state) => ({
-        images: state.images.map(img => 
+        images: state.images.map(img =>
           img.modelId === modelId ? { ...img, ...updates } : img
         )
       })),
@@ -284,7 +284,7 @@ export const useGeneratedAudioStore = create<GeneratedAudioStore>()(
       lastPrompt: null,
       setResponses: (responses) => set({ responses }),
       updateResponse: (modelId, updates) => set((state) => ({
-        responses: state.responses.map(res => 
+        responses: state.responses.map(res =>
           res.modelId === modelId ? { ...res, ...updates } : res
         )
       })),
@@ -343,9 +343,9 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
       item.id === id ? { ...item, title: newTitle } : item
     ),
   })),
-  updateHistoryTitle: (id, newTitle) => 
+  updateHistoryTitle: (id, newTitle) =>
     set((state) => ({
-      history: state.history.map((item) => 
+      history: state.history.map((item) =>
         item.session === id ? { ...item, title: newTitle } : item
       )
     })),
@@ -360,14 +360,14 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
   setPage: (page) => set({ currentPage: page }),
   setHasMore: (hasMore) => set({ hasMore }),
   clearHistory: () => set({ history: [], currentPage: 1, hasMore: true }),
-  addHistoryItems: (items) => 
+  addHistoryItems: (items) =>
     set((state) => {
       // Filter out any duplicates based on session ID
       const existingIds = new Set(state.history.map(item => item.session));
       const newItems = items.filter(item => !existingIds.has(item.session));
-      
-      return { 
-        history: [...state.history, ...newItems] 
+
+      return {
+        history: [...state.history, ...newItems]
       };
     }),
 }));
@@ -395,31 +395,31 @@ interface LikedMediaStore {
 
 export const useLikedMediaStore = create<LikedMediaStore>()(
   // persist(
-    (set, get) => ({
-      likedMedia: [],
-      addLikedMedia: (item) =>
-        set((state) => ({
-          likedMedia: [
-            {
-              ...item,
-              id: `${item.type}-${Date.now()}`,
-              timestamp: new Date(),
-            },
-            ...state.likedMedia,
-          ],
-        })),
-      removeLikedMedia: (id) =>
-        set((state) => ({
-          likedMedia: state.likedMedia.filter((item) => item.id !== id),
-        })),
-      clearLikedMedia: () =>
-        set({ likedMedia: [] }),
-      getLikedMediaByType: (type) => {
-        const media = get().likedMedia;
-        if (type === 'all') return media;
-        return media.filter((item) => item.type === type);
-      },
-    }),
+  (set, get) => ({
+    likedMedia: [],
+    addLikedMedia: (item) =>
+      set((state) => ({
+        likedMedia: [
+          {
+            ...item,
+            id: `${item.type}-${Date.now()}`,
+            timestamp: new Date(),
+          },
+          ...state.likedMedia,
+        ],
+      })),
+    removeLikedMedia: (id) =>
+      set((state) => ({
+        likedMedia: state.likedMedia.filter((item) => item.id !== id),
+      })),
+    clearLikedMedia: () =>
+      set({ likedMedia: [] }),
+    getLikedMediaByType: (type) => {
+      const media = get().likedMedia;
+      if (type === 'all') return media;
+      return media.filter((item) => item.type === type);
+    },
+  }),
   //   {
   //     name: 'liked-media-storage',
   //   }
@@ -444,18 +444,18 @@ export const useDriveAuthStore = create<DriveAuthStore>()(
 
       setAuth: (token: string, expiresIn: number) => {
         const expiresAt = Date.now() + (expiresIn * 1000);
-        set({ 
-          isAuthenticated: true, 
+        set({
+          isAuthenticated: true,
           accessToken: token,
           expiresAt: expiresAt
         });
       },
 
       clearAuth: () => {
-        set({ 
-          isAuthenticated: false, 
+        set({
+          isAuthenticated: false,
           accessToken: null,
-          expiresAt: null 
+          expiresAt: null
         });
       },
 
@@ -480,16 +480,16 @@ export const useDriveAuthStore = create<DriveAuthStore>()(
           if (authInstance.isSignedIn.get()) {
             const currentUser = authInstance.currentUser.get();
             const authResponse = currentUser.getAuthResponse();
-            
+
             set({
               isAuthenticated: true,
               accessToken: authResponse.access_token,
               expiresAt: authResponse.expires_at
             });
-            
+
             return true;
           }
-          
+
           // If not signed in, clear auth state
           state.clearAuth();
           return false;
@@ -527,7 +527,7 @@ export const useSharedLinksStore = create<SharedLinksStore>()(
   persist(
     (set, get) => ({
       sharedLinks: [],
-      addSharedLink: (historyId, title, link) => 
+      addSharedLink: (historyId, title, link) =>
         set((state) => ({
           sharedLinks: [
             {
@@ -743,22 +743,22 @@ interface ApiKeyStore {
 export const useApiKeyStore = create<ApiKeyStore>((set) => ({
   keys: [],
   addKey: (key) => set((state) => ({ keys: [...state.keys, key] })),
-  removeKey: (id) => set((state) => ({ 
-    keys: state.keys.filter(key => key.id !== id) 
+  removeKey: (id) => set((state) => ({
+    keys: state.keys.filter(key => key.id !== id)
   })),
   clearKeys: () => set({ keys: [] }),
   toggleKeyVisibility: (id) => set((state) => ({
-    keys: state.keys.map(key => 
+    keys: state.keys.map(key =>
       key.id === id ? { ...key, isVisible: !key.isVisible } : key
     )
   })),
   toggleKeyStatus: (id: string, isDisabled: boolean) => set((state) => ({
-    keys: state.keys.map(key => 
+    keys: state.keys.map(key =>
       key.id === id ? { ...key, isDisabled } : key
     )
   })),
   updateKeyName: (id: string, newName: string) => set((state) => ({
-    keys: state.keys.map(key => 
+    keys: state.keys.map(key =>
       key.id === id ? { ...key, name: newName } : key
     )
   })),
@@ -785,28 +785,28 @@ interface PaymentStore {
 }
 
 export const usePaymentStore = create<PaymentStore>()(
-    (set, get) => ({
-      paymentMethods: [],
-      addPaymentMethod: (method) => set((state) => ({
-        paymentMethods: [
-          ...state.paymentMethods.map(m => ({...m, isDefault: false})),
-          { ...method, id: `pm_${Date.now()}`, isDefault: method.isDefault }
-        ]
-      })),
-      removePaymentMethod: (id) => set((state) => ({
-        paymentMethods: state.paymentMethods.filter(m => m.id !== id)
-      })),
-      setDefaultPaymentMethod: (id) => set((state) => ({
-        paymentMethods: state.paymentMethods.map(method => ({
-          ...method,
-          isDefault: method.id === id
-        }))
-      })),
-      getDefaultPaymentMethod: () => {
-        return get().paymentMethods.find(m => m.isDefault);
-      },
-      setPaymentMethods: (methods) => set({ paymentMethods: methods })
-    }),
+  (set, get) => ({
+    paymentMethods: [],
+    addPaymentMethod: (method) => set((state) => ({
+      paymentMethods: [
+        ...state.paymentMethods.map(m => ({ ...m, isDefault: false })),
+        { ...method, id: `pm_${Date.now()}`, isDefault: method.isDefault }
+      ]
+    })),
+    removePaymentMethod: (id) => set((state) => ({
+      paymentMethods: state.paymentMethods.filter(m => m.id !== id)
+    })),
+    setDefaultPaymentMethod: (id) => set((state) => ({
+      paymentMethods: state.paymentMethods.map(method => ({
+        ...method,
+        isDefault: method.id === id
+      }))
+    })),
+    getDefaultPaymentMethod: () => {
+      return get().paymentMethods.find(m => m.isDefault);
+    },
+    setPaymentMethods: (methods) => set({ paymentMethods: methods })
+  }),
 );
 
 interface CreditsStore {
@@ -821,17 +821,17 @@ interface CreditsStore {
 
 export const useCreditsStore = create<CreditsStore>()(
 
-    (set) => ({
-      balance: 0,
-      balance_fetched: false,
-      fetching: false,
-      setBalance: (balance) => set({ balance, balance_fetched: true }),
-      updateBalance: (amount) => set((state) => ({ 
-        balance: state.balance + amount 
-      })),
-      setBalanceFetched: (fetched) => set({ balance_fetched: fetched }),
-      setFetching: (fetching) => set({ fetching }),
-    }),
+  (set) => ({
+    balance: 0,
+    balance_fetched: false,
+    fetching: false,
+    setBalance: (balance) => set({ balance, balance_fetched: true }),
+    updateBalance: (amount) => set((state) => ({
+      balance: state.balance + amount
+    })),
+    setBalanceFetched: (fetched) => set({ balance_fetched: fetched }),
+    setFetching: (fetching) => set({ fetching }),
+  }),
 );
 
 interface AutoReloadSettings {
@@ -862,10 +862,11 @@ interface AuthStore {
   clearAuth: () => void;
   setLoading: (status: boolean) => void;
   setPlan: (plan: string | null) => void;
-  refreshPlan: () => Promise<{ 
+  refreshPlan: () => Promise<{
     user: User | null,
-    plan: string | null, 
-    aboutus: boolean } | null>;
+    plan: string | null,
+    aboutus: boolean
+  } | null>;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -879,18 +880,18 @@ export const useAuthStore = create<AuthStore>()(
 
       setAuth: (user: User, token: string, plan: string | null = null) => {
         if (!user || !token) return;
-        set({ 
-          user, 
-          token, 
+        set({
+          user,
+          token,
           isAuthenticated: true,
           plan,
         });
       },
 
       clearAuth: () => {
-        set({ 
-          user: null, 
-          token: null, 
+        set({
+          user: null,
+          token: null,
           isAuthenticated: false,
           plan: null,
         });
@@ -919,27 +920,27 @@ export const useAuthStore = create<AuthStore>()(
           if (response?.data?.user) {
             set({
               user: response.data.user,
-              isAuthenticated: true, 
+              isAuthenticated: true,
             });
           }
           if (response) {
-            set({ 
+            set({
               plan: response.plan,
               isAuthenticated: true,
             });
             // console.log(response.plan, 'this is the plan from the store');
           }
           // console.log(response, 'this is the response from the store');
-          return { 
+          return {
             user: response?.data?.user,
             plan: (typeof response?.plan === 'string') ? response.plan : null,
             aboutus: response?.aboutus
           };
         } catch (error: any) {
           // toast.error(error.response.data.error || error.response.data.message || 'Failed to load your data');
-          set({ 
+          set({
             isAuthenticated: false,
-            plan: null 
+            plan: null
           });
           return { plan: null, aboutus: false };
         }
@@ -948,7 +949,7 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ 
+      partialize: (state) => ({
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
@@ -1051,7 +1052,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       projects: state.projects.map((p) =>
         p.uuid === uuid ? { ...p, ...data } : p
       ),
-      currentProject: state.currentProject?.uuid === uuid 
+      currentProject: state.currentProject?.uuid === uuid
         ? { ...state.currentProject, ...data }
         : state.currentProject,
     }));
@@ -1096,13 +1097,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       // Get the current project and find highest file index to increment
       const currentProject = get().projects.find(p => p.uuid === projectUuid);
       let nextIndex = 1; // Default start with 1
-      
+
       if (currentProject && currentProject.files.length > 0) {
         // Find the highest existing index and add 1
         const highestIndex = Math.max(...currentProject.files
           .map(f => typeof f.id === 'string' ? parseInt(f.id, 10) : 0)
           .filter(id => !isNaN(id)));
-        
+
         nextIndex = isFinite(highestIndex) ? highestIndex + 1 : 1;
       }
 
@@ -1170,12 +1171,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       }
       return project;
     });
-    
+
     set({ projects: processedProjects });
   },
-  
+
   setLoading: (status) => set({ isLoading: status }),
-  
+
   setError: (error) => set({ error }),
 }));
 
@@ -1330,7 +1331,7 @@ export const useUsageRestrictionsStore = create<UsageRestrictionsState>()(
         combine: { message: null, comebackTime: null, isRestricted: false }, // New restriction
         compare: { message: null, comebackTime: null, isRestricted: false }, // New restriction
       },
-      setRestriction: (type, message, comebackTime = null) => 
+      setRestriction: (type, message, comebackTime = null) =>
         set((state) => ({
           restrictions: {
             ...state.restrictions,
@@ -1341,7 +1342,7 @@ export const useUsageRestrictionsStore = create<UsageRestrictionsState>()(
             }
           }
         })),
-      clearRestriction: (type) => 
+      clearRestriction: (type) =>
         set((state) => ({
           restrictions: {
             ...state.restrictions,
@@ -1353,7 +1354,7 @@ export const useUsageRestrictionsStore = create<UsageRestrictionsState>()(
           }
         })),
       isRestricted: (type) => {
-      const restriction = get().restrictions[type];
+        const restriction = get().restrictions[type];
         if (!restriction.isRestricted) {
           return false;
         }
@@ -1362,14 +1363,14 @@ export const useUsageRestrictionsStore = create<UsageRestrictionsState>()(
         if (restriction.comebackTime) {
           const now = new Date().getTime();
           const comebackTime = new Date(restriction.comebackTime).getTime();
-          
+
           if (now >= comebackTime) {
             // Auto-clear restriction if time has passed
             get().clearRestriction(type);
             return false;
           }
         }
-        
+
         return true;
       }
     }),
@@ -1392,6 +1393,33 @@ export const useTutorialStore = create<TutorialStore>()(
     }),
     {
       name: 'tutorial-storage',
+    }
+  )
+);
+
+interface OrgSessionStore {
+  deviceSessionId: string | null;
+  setDeviceSessionId: (id: string | null) => void;
+  sessionUser: { name: string; class_group: string } | null;
+  setSessionUser: (user: { name: string; class_group: string } | null) => void;
+  orgId: string | null;
+  setOrgId: (id: string | null) => void;
+  clearSession: () => void;
+}
+
+export const useOrgSessionStore = create<OrgSessionStore>()(
+  persist(
+    (set) => ({
+      deviceSessionId: null,
+      sessionUser: null,
+      orgId: "1",
+      setDeviceSessionId: (id) => set({ deviceSessionId: id }),
+      setSessionUser: (user) => set({ sessionUser: user }),
+      setOrgId: (id) => set({ orgId: id }),
+      clearSession: () => set({ deviceSessionId: null, sessionUser: null, orgId: null }),
+    }),
+    {
+      name: 'org-session-storage',
     }
   )
 );

@@ -180,6 +180,11 @@ export const authApi = {
     return response.data;
   },
 
+  exchangeCode: async (code: string, orgId: string): Promise<LoginResponse> => {
+    const response = await api.post(`/organisations/${orgId}/code-exchange`, { code });
+    return response.data;
+  },
+
   handleGoogleCallback: async () => {
     try {
       const response = await api.get(`/auth/google`);
@@ -222,7 +227,7 @@ export const authApi = {
   resendVerification: async (): Promise<ResendVerificationResponse> => {
     try {
       const response = await api.post('/resend/code');
-      if(!response.data.status) {
+      if (!response.data.status) {
         toast.error(response.data.message || 'Failed to send code');
         throw new Error(response.data.message || 'Failed to send code');
       }
@@ -238,11 +243,11 @@ export const authApi = {
     return response.data;
   },
 
-  resetPassword: async (data: { 
-    token: string; 
-    email: string; 
-    password: string; 
-    password_confirmation: string 
+  resetPassword: async (data: {
+    token: string;
+    email: string;
+    password: string;
+    password_confirmation: string
   }) => {
     const response = await api.post('/reset-password', data);
     return response.data;
@@ -253,7 +258,7 @@ export const authApi = {
     return response.data;
   },
 
-  checkout: async (data: { 
+  checkout: async (data: {
     plan: 'free' | 'standard' | 'plus' | 'custom' | 'pro';
     billing_cycle: 'monthly' | 'yearly';
   }): Promise<CheckoutResponse> => {
@@ -262,7 +267,7 @@ export const authApi = {
   },
 
   switchSubscription: async (data: {
-    plan: string; 
+    plan: string;
     invoice_now: boolean;
     prorate: boolean;
     anchor_now: boolean;

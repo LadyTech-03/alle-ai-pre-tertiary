@@ -10,6 +10,7 @@ import { authApi } from "@/lib/api/auth";
 import { LoadingScreen } from "@/components/features/auth/LoadingScreen";
 import useChatAPIStore from "@/stores/developer-benchmark";
 import { toast } from "sonner";
+import { useOrgSessionStore } from "@/stores";
 // Define the slides interface
 interface Slide {
   id: number;
@@ -33,25 +34,66 @@ export default function AuthLayout({
   // Check auth on mount
   useEffect(() => {
     const checkAuth = async () => {
+      // 1. Get code from URL
+      const searchParams = new URLSearchParams(window.location.search);
+      const exchange_token = searchParams.get('aiptotp');
+      const orgId = searchParams.get('org_id');
+
+      // If code exists, exchange it for token
+      if (exchange_token && orgId) {
+        try {
+          const response = await authApi.exchangeCode(exchange_token, orgId);
+          console.log(response, 'What I`ve done');
+          return
+          // if (response.status && response.data.token) {
+          //   setAuth(response.data.user, response.data.token, response.data.plan);
+
+          //   // Set Organization ID if present
+          //   if (orgId) {
+          //     useOrgSessionStore.getState().setOrgId(orgId);
+          //   }
+
+          //   // Clean URL
+          //   const url = new URL(window.location.href);
+          //   url.searchParams.delete('aiptotp');
+          //   url.searchParams.delete('org_id');
+          //   window.history.replaceState({}, '', url.toString());
+
+          //   router.push("/auth?mode=create-session");
+          //   setAuthState("show-auth");
+          //   return;
+          // }
+        } catch (error) {
+          console.error("Code exchange failed:", error);
+          clearAuth();
+          window.location.href = "https://app.alle-ai.com";
+          return;
+        }
+      }
+
+      // 2. Fallback to existing token in store
       if (token) {
         try {
           const response = await authApi.getUser();
           setAuth(response.data.user, token, response.plan);
-          if(response.status){
+
+          if (response.status) {
             router.push("/auth?mode=create-session");
             setAuthState("show-auth");
           }
-        } catch (error: any) {
+        } catch (error) {
+          console.error("Token validation failed:", error);
           clearAuth();
-          redirect("https://app.alle.ai.com");
+          window.location.href = "https://app.alle-ai.com";
         }
       } else {
-        setAuthState("show-auth");
+        // No code and no token
+        window.location.href = "https://app.alle-ai.com";
       }
     };
 
     checkAuth();
-  }, []);
+  }, [token]);
 
   // Don't render anything while checking auth
   if (authState === "checking" || authState === "redirect") {

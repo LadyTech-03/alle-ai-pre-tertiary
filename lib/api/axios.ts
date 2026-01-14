@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useAuthStore } from "@/stores";
+import { useAuthStore, useOrgSessionStore } from "@/stores";
 import { extractErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -17,6 +17,11 @@ api.interceptors.request.use(
     const token = useAuthStore.getState().token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const deviceSessionId = useOrgSessionStore.getState().deviceSessionId;
+    if (deviceSessionId) {
+      config.headers['Device-Session'] = deviceSessionId;
     }
 
     // Check if the request data is FormData and adjust Content-Type accordingly

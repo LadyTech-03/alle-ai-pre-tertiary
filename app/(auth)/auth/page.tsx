@@ -66,19 +66,6 @@ function AuthPageInner() {
     return () => clearTimeout(timeout);
   }, [currentTextIndex]);
 
-  const updateUrlMode = (mode: string) => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('mode', mode);
-    // Preserve redirect parameter if it exists
-    const redirectUrl = new URLSearchParams(window.location.search).get('redirect') ||
-      new URLSearchParams(window.location.search).get('returnUrl') ||
-      new URLSearchParams(window.location.search).get('return');
-    if (redirectUrl && !url.searchParams.has('redirect')) {
-      url.searchParams.set('redirect', redirectUrl);
-    }
-    window.history.replaceState({}, '', url.toString());
-  };
-
   // Read mode from URL params on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);

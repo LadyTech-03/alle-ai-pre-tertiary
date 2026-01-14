@@ -5,6 +5,7 @@ import { usePathname, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -754,195 +755,204 @@ export function Sidebar() {
                                 {project.histories && project.histories.length > 0 ? (
                                   <>
                                     {project.histories.slice(0, 3).map((chat) => (
-                                      <ContextMenu key={chat.session}>
-                                        <ContextMenuTrigger>
-                                          <div
-                                            className="group relative flex items-center gap-1 px-3 py-1 pl-7 text-xs hover:bg-secondary/80 rounded-md cursor-pointer"
-                                          >
-                                            <PiChatsCircle className="h-3 w-3 mr-1.5" style={project.color ? { color: project.color } : {}} />
-                                            <TooltipProvider>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <div className="truncate max-w-full relative z-50">
-                                                    {editingId === chat.session ? (
-                                                      <div className="flex items-center gap-1">
-                                                        <Input
-                                                          value={editingTitle}
-                                                          onChange={(e) => setEditingTitle(e.target.value)}
-                                                          onKeyDown={(e) => {
-                                                            if (e.key === "Enter") {
-                                                              handleRenameSubmit(chat.session);
-                                                            }
+                                      <>
+                                      <motion.div
+                                      initial={{ opacity: 0, y: 4}}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      key={chat.session}
+                                      >
+                                        <ContextMenu>
+                                          <ContextMenuTrigger>
+                                            <div
+                                              className="group relative flex items-center gap-1 px-3 py-1 pl-7 text-xs hover:bg-secondary/80 rounded-md cursor-pointer"
+                                            >
+                                              <PiChatsCircle className="h-3 w-3 mr-1.5" style={project.color ? { color: project.color } : {}} />
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <div className="truncate max-w-full relative z-50">
+                                                      {editingId === chat.session ? (
+                                                        <div className="flex items-center gap-1">
+                                                          <Input
+                                                            value={editingTitle}
+                                                            onChange={(e) => setEditingTitle(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                              if (e.key === "Enter") {
+                                                                handleRenameSubmit(chat.session);
+                                                              }
+                                                            }}
+                                                            autoFocus
+                                                            className="h-5 text-xs"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                          />
+                                                          {renamingHistoryId === chat.session ? (
+                                                            <Loader className="h-3 w-3 animate-spin text-muted-foreground" />
+                                                          ) : (
+                                                            <>
+                                                              <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-4 w-4 p-0"
+                                                                onClick={(e) => { e.stopPropagation(); handleRenameSubmit(chat.session); }}
+                                                                aria-label="Confirm Rename"
+                                                              >
+                                                                <Check className="h-3 w-3" />
+                                                              </Button>
+                                                              <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-4 w-4 p-0"
+                                                                onClick={(e) => { e.stopPropagation(); setEditingId(null); setEditingTitle(""); }}
+                                                                aria-label="Cancel Rename"
+                                                              >
+                                                                <X className="h-3 w-3" />
+                                                              </Button>
+                                                            </>
+                                                          )}
+                                                        </div>
+                                                      ) : (
+                                                        <div
+                                                          onClick={() => {
+                                                            setGenerationType('load');
+                                                            setCurrentProject(project);
+                                                            router.replace(`/project/${project.uuid}/chat/${chat.session}`);
+                                                            (isMobile && isOpen) ? toggle() : '';
+                                                            // Set document title
+                                                            document.title = `${chat.title} - Alle-AI`;
                                                           }}
-                                                          autoFocus
-                                                          className="h-5 text-xs"
-                                                          onClick={(e) => e.stopPropagation()}
-                                                        />
-                                                        {renamingHistoryId === chat.session ? (
-                                                          <Loader className="h-3 w-3 animate-spin text-muted-foreground" />
-                                                        ) : (
-                                                          <>
-                                                            <Button
-                                                              variant="ghost"
-                                                              size="icon"
-                                                              className="h-4 w-4 p-0"
-                                                              onClick={(e) => { e.stopPropagation(); handleRenameSubmit(chat.session); }}
-                                                              aria-label="Confirm Rename"
-                                                            >
-                                                              <Check className="h-3 w-3" />
-                                                            </Button>
-                                                            <Button
-                                                              variant="ghost"
-                                                              size="icon"
-                                                              className="h-4 w-4 p-0"
-                                                              onClick={(e) => { e.stopPropagation(); setEditingId(null); setEditingTitle(""); }}
-                                                              aria-label="Cancel Rename"
-                                                            >
-                                                              <X className="h-3 w-3" />
-                                                            </Button>
-                                                          </>
-                                                        )}
-                                                      </div>
-                                                    ) : (
-                                                      <div
-                                                        onClick={() => {
-                                                          setGenerationType('load');
-                                                          setCurrentProject(project);
-                                                          router.replace(`/project/${project.uuid}/chat/${chat.session}`);
-                                                          (isMobile && isOpen) ? toggle() : '';
-                                                          // Set document title
-                                                          document.title = `${chat.title} - Alle-AI`;
-                                                        }}
+                                                        >
+                                                          <TextStream
+                                                            text={chat.title}
+                                                            className="text-xs truncate"
+                                                            isStreaming={streamingTitles[chat.session] || false}
+                                                            streamDuration={800}
+                                                          />
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent side="right" className="max-w-[200px] text-xs break-words">
+                                                    {chat.title}
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+
+                                              {/* Gradient shadow at end of container */}
+                                              <div className="absolute right-8 top-0 h-full w-5 bg-gradient-to-r from-transparent to-sideBarBackground group-hover:to-secondary/80" />
+
+                                              {/* Three dots button */}
+                                              {editingId !== chat.session && (
+                                                <div className="ml-auto opacity-0 group-hover:opacity-100">
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-5 w-5 p-0 border-none outline-none bg-transparent hover:bg-transparent"
+                                                        onClick={(e) => e.stopPropagation()}
                                                       >
-                                                        <TextStream
-                                                          text={chat.title}
-                                                          className="text-xs truncate"
-                                                          isStreaming={streamingTitles[chat.session] || false}
-                                                          streamDuration={800}
-                                                        />
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="right" className="max-w-[200px] text-xs break-words">
-                                                  {chat.title}
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-
-                                            {/* Gradient shadow at end of container */}
-                                            <div className="absolute right-8 top-0 h-full w-5 bg-gradient-to-r from-transparent to-sideBarBackground group-hover:to-secondary/80" />
-
-                                            {/* Three dots button */}
-                                            {editingId !== chat.session && (
-                                              <div className="ml-auto opacity-0 group-hover:opacity-100">
-                                                <DropdownMenu>
-                                                  <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="icon"
-                                                      className="h-5 w-5 p-0 border-none outline-none bg-transparent hover:bg-transparent"
-                                                      onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                      <EllipsisVertical className="h-3 w-3" />
-                                                    </Button>
-                                                  </DropdownMenuTrigger>
-                                                  <DropdownMenuContent align="end" className="w-[200px] bg-backgroundSecondary rounded-xl">
-                                                    <DropdownMenuSub>
-                                                      <DropdownMenuSubTrigger>
-                                                        <BsFolder2Open className="mr-2 h-4 w-4" />
-                                                        <span className="text-sm">Move to project</span>
-                                                      </DropdownMenuSubTrigger>
-                                                      <DropdownMenuSubContent className="bg-backgroundSecondary rounded-xl">
-                                                        {projects.filter(p => p.uuid !== project.uuid).map(p => (
-                                                          <DropdownMenuItem
-                                                            key={p.uuid}
-                                                            onClick={() => handleMoveConversation(chat.session, p.uuid)}
-                                                            disabled={movingConversationId === chat.session}
-                                                          >
-                                                            <BsFolder2Open className="mr-2 h-4 w-4" style={{ color: p.color || undefined }} />
-                                                            <span>{p.name}</span>
-                                                          </DropdownMenuItem>
-                                                        ))}
-                                                        {projects.length <= 1 && (
-                                                          <DropdownMenuItem disabled>
-                                                            <span className="text-muted-foreground">No other projects</span>
-                                                          </DropdownMenuItem>
-                                                        )}
-                                                      </DropdownMenuSubContent>
-                                                    </DropdownMenuSub>
-                                                    <DropdownMenuItem onClick={() => handleMoveConversation(chat.session)} disabled={movingConversationId === chat.session}>
-                                                      <Undo2 className="mr-2 h-4 w-4" />
-                                                      <span className="text-sm">Remove from {project.name}</span>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator className="bg-borderColorPrimary" />
-                                                    <DropdownMenuItem onClick={() => handleRename(chat.session, chat.title)}>
-                                                      <Pencil className="mr-2 h-4 w-4" />
-                                                      <span className="text-sm">Rename</span>
-                                                    </DropdownMenuItem>
-                                                    {/* <DropdownMenuItem onClick={() => {}}>
-                                                      <Archive className="mr-2 h-4 w-4" />
-                                                      <span className="text-sm">Archive</span>
-                                                    </DropdownMenuItem> */}
-                                                    <DropdownMenuItem
-                                                      onClick={() => setHistoryToDelete(chat.session)}
-                                                      className="text-red-500 focus:text-red-500"
-                                                    >
-                                                      <Trash2 className="mr-2 h-4 w-4" />
-                                                      <span className="text-sm">Delete</span>
-                                                    </DropdownMenuItem>
-                                                  </DropdownMenuContent>
-                                                </DropdownMenu>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </ContextMenuTrigger>
-                                        <ContextMenuContent className="w-[200px] bg-backgroundSecondary rounded-xl">
-                                          <ContextMenuSub>
-                                            <ContextMenuSubTrigger>
-                                              <BsFolder2Open className="mr-2 h-4 w-4" />
-                                              <span className="text-sm">Move to project</span>
-                                            </ContextMenuSubTrigger>
-                                            <ContextMenuSubContent className="bg-backgroundSecondary rounded-xl">
-                                              {projects.filter(p => p.uuid !== project.uuid).map(p => (
-                                                <ContextMenuItem
-                                                  key={p.uuid}
-                                                  onClick={() => handleMoveConversation(chat.session, p.uuid)}
-                                                  disabled={movingConversationId === chat.session}
-                                                >
-                                                  <BsFolder2Open className="mr-2 h-4 w-4" style={{ color: p.color || undefined }} />
-                                                  <span>{p.name}</span>
-                                                </ContextMenuItem>
-                                              ))}
-                                              {projects.length <= 1 && (
-                                                <ContextMenuItem disabled>
-                                                  <span className="text-muted-foreground">No other projects</span>
-                                                </ContextMenuItem>
+                                                        <EllipsisVertical className="h-3 w-3" />
+                                                      </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-[200px] bg-backgroundSecondary rounded-xl">
+                                                      <DropdownMenuSub>
+                                                        <DropdownMenuSubTrigger>
+                                                          <BsFolder2Open className="mr-2 h-4 w-4" />
+                                                          <span className="text-sm">Move to project</span>
+                                                        </DropdownMenuSubTrigger>
+                                                        <DropdownMenuSubContent className="bg-backgroundSecondary rounded-xl">
+                                                          {projects.filter(p => p.uuid !== project.uuid).map(p => (
+                                                            <DropdownMenuItem
+                                                              key={p.uuid}
+                                                              onClick={() => handleMoveConversation(chat.session, p.uuid)}
+                                                              disabled={movingConversationId === chat.session}
+                                                            >
+                                                              <BsFolder2Open className="mr-2 h-4 w-4" style={{ color: p.color || undefined }} />
+                                                              <span>{p.name}</span>
+                                                            </DropdownMenuItem>
+                                                          ))}
+                                                          {projects.length <= 1 && (
+                                                            <DropdownMenuItem disabled>
+                                                              <span className="text-muted-foreground">No other projects</span>
+                                                            </DropdownMenuItem>
+                                                          )}
+                                                        </DropdownMenuSubContent>
+                                                      </DropdownMenuSub>
+                                                      <DropdownMenuItem onClick={() => handleMoveConversation(chat.session)} disabled={movingConversationId === chat.session}>
+                                                        <Undo2 className="mr-2 h-4 w-4" />
+                                                        <span className="text-sm">Remove from {project.name}</span>
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuSeparator className="bg-borderColorPrimary" />
+                                                      <DropdownMenuItem onClick={() => handleRename(chat.session, chat.title)}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        <span className="text-sm">Rename</span>
+                                                      </DropdownMenuItem>
+                                                      {/* <DropdownMenuItem onClick={() => {}}>
+                                                        <Archive className="mr-2 h-4 w-4" />
+                                                        <span className="text-sm">Archive</span>
+                                                      </DropdownMenuItem> */}
+                                                      <DropdownMenuItem
+                                                        onClick={() => setHistoryToDelete(chat.session)}
+                                                        className="text-red-500 focus:text-red-500"
+                                                      >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        <span className="text-sm">Delete</span>
+                                                      </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
+                                                </div>
                                               )}
-                                            </ContextMenuSubContent>
-                                          </ContextMenuSub>
-                                          <ContextMenuItem onClick={() => handleMoveConversation(chat.session)} disabled={movingConversationId === chat.session}>
-                                            <Undo2 className="mr-2 h-4 w-4" />
-                                            <span className="text-sm">Remove from {project.name}</span>
-                                          </ContextMenuItem>
-                                          <ContextMenuSeparator className="bg-borderColorPrimary" />
-                                          <ContextMenuItem onClick={() => handleRename(chat.session, chat.title)}>
-                                            <Pencil className="mr-2 h-4 w-4" />
-                                            <span className="text-sm">Rename</span>
-                                          </ContextMenuItem>
-                                          {/* <ContextMenuItem onClick={() => {}}>
-                                              <Archive className="mr-2 h-4 w-4" />
-                                              <span className="text-sm">Archive</span>
-                                            </ContextMenuItem> */}
-                                          <ContextMenuItem
-                                            onClick={() => setHistoryToDelete(chat.session)}
-                                            className="text-red-500 focus:text-red-500"
-                                          >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            <span className="text-sm">Delete</span>
-                                          </ContextMenuItem>
-                                        </ContextMenuContent>
-                                      </ContextMenu>
+                                            </div>
+                                          </ContextMenuTrigger>
+                                          <ContextMenuContent className="w-[200px] bg-backgroundSecondary rounded-xl">
+                                            <ContextMenuSub>
+                                              <ContextMenuSubTrigger>
+                                                <BsFolder2Open className="mr-2 h-4 w-4" />
+                                                <span className="text-sm">Move to project</span>
+                                              </ContextMenuSubTrigger>
+                                              <ContextMenuSubContent className="bg-backgroundSecondary rounded-xl">
+                                                {projects.filter(p => p.uuid !== project.uuid).map(p => (
+                                                  <ContextMenuItem
+                                                    key={p.uuid}
+                                                    onClick={() => handleMoveConversation(chat.session, p.uuid)}
+                                                    disabled={movingConversationId === chat.session}
+                                                  >
+                                                    <BsFolder2Open className="mr-2 h-4 w-4" style={{ color: p.color || undefined }} />
+                                                    <span>{p.name}</span>
+                                                  </ContextMenuItem>
+                                                ))}
+                                                {projects.length <= 1 && (
+                                                  <ContextMenuItem disabled>
+                                                    <span className="text-muted-foreground">No other projects</span>
+                                                  </ContextMenuItem>
+                                                )}
+                                              </ContextMenuSubContent>
+                                            </ContextMenuSub>
+                                            <ContextMenuItem onClick={() => handleMoveConversation(chat.session)} disabled={movingConversationId === chat.session}>
+                                              <Undo2 className="mr-2 h-4 w-4" />
+                                              <span className="text-sm">Remove from {project.name}</span>
+                                            </ContextMenuItem>
+                                            <ContextMenuSeparator className="bg-borderColorPrimary" />
+                                            <ContextMenuItem onClick={() => handleRename(chat.session, chat.title)}>
+                                              <Pencil className="mr-2 h-4 w-4" />
+                                              <span className="text-sm">Rename</span>
+                                            </ContextMenuItem>
+                                            {/* <ContextMenuItem onClick={() => {}}>
+                                                <Archive className="mr-2 h-4 w-4" />
+                                                <span className="text-sm">Archive</span>
+                                              </ContextMenuItem> */}
+                                            <ContextMenuItem
+                                              onClick={() => setHistoryToDelete(chat.session)}
+                                              className="text-red-500 focus:text-red-500"
+                                            >
+                                              <Trash2 className="mr-2 h-4 w-4" />
+                                              <span className="text-sm">Delete</span>
+                                            </ContextMenuItem>
+                                          </ContextMenuContent>
+                                        </ContextMenu>
+                                      </motion.div>
+                                      </>
                                     ))}
 
                                     {project.histories.length > 3 && (
@@ -1229,7 +1239,7 @@ export function Sidebar() {
                       </ContextMenu>
                     ))
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
+                    <div className="flex flex-col items-start justify-start py-4 text-muted-foreground">
                       <span className="text-xs">No history available</span>
                     </div>
                   )}
@@ -1245,7 +1255,7 @@ export function Sidebar() {
             </div>
 
             <div className="px-2 pb-3">
-              <Button variant={'destructive'} className="w-full flex items-center">
+              <Button variant={'destructive'} className="w-full flex items-center justify-start">
                 <LogOut className="mr-3 h-4 w-4" />
                 End Session
               </Button>

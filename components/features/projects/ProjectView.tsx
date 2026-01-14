@@ -584,7 +584,7 @@ export function ProjectView({ onCreateConversation, isLoading }: ProjectViewProp
         </div>
 
         {/* 3. Quick Actions Bar */}
-        <div className="grid grid-cols-2 max-w-3xl  gap-4 mb-8">
+        <div className="grid max-w-3xl  gap-4 mb-8">
           <Button 
             variant="outline" 
             size="lg" 

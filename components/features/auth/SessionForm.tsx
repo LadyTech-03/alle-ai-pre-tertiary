@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -26,6 +26,9 @@ import { formVariants } from "@/lib/utils";
 import { Loader, User, GraduationCap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { orgDeviceApi } from "@/lib/api/orgDevice";
+import { toast } from "sonner";
+import { useOrgSessionStore } from "@/stores";
 
 // Zod schema for session validation
 const sessionSchema = z.object({
@@ -41,15 +44,17 @@ const sessionSchema = z.object({
 
 type SessionFormData = z.infer<typeof sessionSchema>;
 
-// Class options from Class 1 to Class 8
-const CLASS_OPTIONS = Array.from({ length: 8 }, (_, i) => ({
-    value: `class-${i + 1}`,
-    label: `Class ${i + 1}`,
-}));
+interface Option {
+    value: string;
+    label: string;
+}
 
 export function SessionForm() {
     const [isLoading, setIsLoading] = useState(false);
+    const [isClassesLoading, setIsClassesLoading] = useState(true);
+    const [classOptions, setClassOptions] = useState<Option[]>([]);
     const router = useRouter();
+    const orgId = useOrgSessionStore((state) => state.orgId);
 
     const form = useForm<SessionFormData>({
         resolver: zodResolver(sessionSchema),
@@ -60,23 +65,54 @@ export function SessionForm() {
         },
     });
 
+    useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                const response = await orgDeviceApi.getClassGroups(orgId!);
+                if (response.status && response.data) {
+                    const options = response.data.map((group) => ({
+                        value: group.slug,
+                        label: group.name,
+                    }));
+                    setClassOptions(options);
+                }
+            } catch (error) {
+                console.error("Failed to fetch class groups:", error);
+                // toast.error("Failed to load class options");
+            } finally {
+                setIsClassesLoading(false);
+            }
+        };
+
+        fetchClasses();
+    }, [orgId]);
+
     const onSubmit = async (data: SessionFormData) => {
         setIsLoading(true);
 
         try {
-            // Log session data (you can store this or send to backend if needed)
-            console.log("Session created:", data);
+            // Call the start device session API
+            const response = await orgDeviceApi.startSession(orgId!, {
+                name: data.name,
+                class: data.class
+            });
 
-            // Small delay for better UX
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            if (response.success && response.to === "edu_device_chat") {
+                // Store session details
+                useOrgSessionStore.getState().setDeviceSessionId(response.device_session);
+                useOrgSessionStore.getState().setSessionUser(response.session_user);
 
-            // Redirect to project page
-            router.push("/project");
-        } catch (error) {
-            console.error("Session creation error:", error);
+                // Redirect to project page on success
+                router.push("/project");
+            } else {
+                setIsLoading(false);
+            }
+        } catch (error: any) {
+            // console.error("Session creation error:", error);
             setIsLoading(false);
         }
     };
+
 
     return (
         <motion.div
@@ -125,17 +161,17 @@ export function SessionForm() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-sm font-medium">Your Class</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={isClassesLoading}>
                                     <FormControl>
                                         <SelectTrigger className="border-borderColorPrimary focus-visible:outline-none">
                                             <div className="flex items-center gap-2">
                                                 <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                                                <SelectValue placeholder="Select your class" />
+                                                <SelectValue placeholder={isClassesLoading ? "Loading Classes..." : "Select your class"} />
                                             </div>
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {CLASS_OPTIONS.map((option) => (
+                                        {classOptions.map((option) => (
                                             <SelectItem key={option.value} value={option.value}>
                                                 {option.label}
                                             </SelectItem>
