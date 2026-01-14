@@ -1244,6 +1244,12 @@ export function Sidebar() {
               </ScrollArea>
             </div>
 
+            <div className="px-2 pb-3">
+              <Button variant={'destructive'} className="w-full flex items-center">
+                <LogOut className="mr-3 h-4 w-4" />
+                End Session
+              </Button>
+            </div>
             {/* User section at bottom - Premium Design */}
             <div className="flex-shrink-0 px-2 pb-3 mt-auto">
               <div className="bg-backgroundSecondary rounded-lg overflow-hidden shadow-lg border border-borderColorPrimary">
@@ -1328,12 +1334,6 @@ export function Sidebar() {
 
                 </div>
               </div>
-            </div>
-            <div>
-              <Button variant={'destructive'} className="w-full pb-3 flex items-center">
-                <LogOut className="mr-3 h-4 w-4" />
-                End Session
-              </Button>
             </div>
           </>
         ) : (
