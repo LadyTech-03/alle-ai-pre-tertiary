@@ -297,7 +297,7 @@ export default function ProjectsPage() {
                         <div
                           key={project.uuid}
                           onClick={() => handleProjectClick(project)}
-                          className="group bg-backgroundSecondary border border-borderColorPrimary rounded-lg overflow-hidden cursor-pointer transition-all hover:border-primary hover:shadow-sm"
+                          className="group bg-backgroundSecondary border border-borderColorPrimary rounded-lg overflow-hidden cursor-pointer transition-all hover:border-borderColorPrimary hover:shadow-sm"
                         >
                           <div className="flex items-center">
                             {/* Colored left strip */}
