@@ -1,0 +1,3 @@
+I left off at trying to set the pesonalization stuff in the store. and linking them the the user info from server
+
+I changed the route to /chat for /plans in the RouteGuard ln:84 to force see the chat page because of the bug with the plans.
