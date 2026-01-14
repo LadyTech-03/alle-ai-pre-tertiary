@@ -1280,21 +1280,6 @@ export function Sidebar() {
                         </div>
                       </div>
 
-                      {/* Upgrade Plan */}
-                      {/* <DropdownMenuItem
-                        onClick={() => (isPaidPlan ? router.push('/manage-subscription') : setPlansModalOpen(true))}
-                        className="cursor-pointer"
-                      >
-                        <Gem className="mr-3 h-4 w-4" />
-                        <span className="text-sm">{isPaidPlan ? 'Manage Subscription' : 'Upgrade Plan'}</span>
-                      </DropdownMenuItem> */}
-
-                      {/* Personalization */}
-                      {/* <DropdownMenuItem onClick={() => setUserProfileModalOpen(true)} className="cursor-pointer">
-                        <Clock className="mr-3 h-4 w-4" />
-                        <span className="text-sm">Personalization</span>
-                      </DropdownMenuItem> */}
-
                       {/* Settings */}
                       <DropdownMenuItem onClick={() => setSettingsModalOpen(true)} className="cursor-pointer">
                         <Settings className="mr-3 h-4 w-4" />
@@ -1315,14 +1300,12 @@ export function Sidebar() {
                             <Book className="mr-3 h-4 w-4" />
                             <span className="text-sm">Documentation</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => router.push('/faq')} className="cursor-pointer">
-                            <BookOpen className="mr-3 h-4 w-4" />
-                            <span className="text-sm">FAQ</span>
+                          <DropdownMenuItem asChild className="cursor-pointer">
+                            <Link href={'https://app.alle-ai.com/faq'} target="_blank">
+                              <BookOpen className="mr-3 h-4 w-4" />
+                              <span className="text-sm">FAQ</span>
+                            </Link>
                           </DropdownMenuItem>
-                          {/* <DropdownMenuItem onClick={() => setShortcutsModalOpen(true)} className="cursor-pointer">
-                            <Keyboard className="mr-3 h-4 w-4" />
-                            <span className="text-sm">Keyboard shortcuts</span>
-                          </DropdownMenuItem> */}
                           <DropdownMenuItem onClick={() => router.push('/about/alle-ai')} className="cursor-pointer">
                             <BadgeInfo className="mr-3 h-4 w-4" />
                             <span className="text-sm">About</span>
@@ -1342,9 +1325,15 @@ export function Sidebar() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  
+
                 </div>
               </div>
+            </div>
+            <div>
+              <Button variant={'destructive'} className="w-full pb-3 flex items-center">
+                <LogOut className="mr-3 h-4 w-4" />
+                End Session
+              </Button>
             </div>
           </>
         ) : (

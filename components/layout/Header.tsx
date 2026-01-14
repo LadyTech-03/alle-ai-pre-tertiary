@@ -784,9 +784,9 @@ export function Header() {
                       <item.icon className="h-4 w-4" />
                       <span>{item.label}</span>
                     </div>
-                    {item.interactionType === 'link' && item.openInNewTab && (
+                    {/* {item.interactionType === 'link' && item.openInNewTab && (
                       <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
-                    )}
+                    )} */}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

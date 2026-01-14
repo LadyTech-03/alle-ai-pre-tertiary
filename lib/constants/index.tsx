@@ -220,14 +220,14 @@ export const userMenuItems = [
   //   onClick: () => {
   //   },
   // },
-  {
-    label: "Favorites",
-    icon: Heart,
-    interactionType: "modal",
-    onClick: () => {
-      // console.log('Opening Refer Modal');
-    },
-  },
+  // {
+  //   label: "Favorites",
+  //   icon: Heart,
+  //   interactionType: "modal",
+  //   onClick: () => {
+  //     // console.log('Opening Refer Modal');
+  //   },
+  // },
   {
     label: "Settings",
     icon: Settings,
