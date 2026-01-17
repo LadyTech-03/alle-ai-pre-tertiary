@@ -310,14 +310,14 @@ export function ProjectView({ onCreateConversation, isLoading }: ProjectViewProp
           <span>{currentProject.files?.length || 0} file in {projectName}</span>
         </div>
         <span className="text-border">•</span>
-        <div className="flex items-center gap-1.5">
+        {/* <div className="flex items-center gap-1.5">
           <Settings className="h-3.5 w-3.5" />
           <span>
             {currentProject.instructions 
               ? "Instructions added" 
               : "No instructions"}
           </span>
-        </div>
+        </div> */}
       </div>
     </div>
   );
@@ -633,7 +633,7 @@ export function ProjectView({ onCreateConversation, isLoading }: ProjectViewProp
             </div>
           </Button>
           
-          <Button 
+          {/* <Button 
             variant="outline" 
             size="lg"
             className="h-auto py-2 px-4 rounded-2xl"
@@ -644,11 +644,11 @@ export function ProjectView({ onCreateConversation, isLoading }: ProjectViewProp
                 {isLoadingConversations || isLoadingFiles ? (
                   <>
                     <div className="flex flex-col items-start space-y-2 w-full">
-                      <Skeleton className="h-4 w-28 rounded-md" /> {/* Title skeleton */}
-                      <Skeleton className="h-3 w-40 rounded-md" /> {/* First line of text */}
-                      <Skeleton className="h-3 w-32 rounded-md" /> {/* Second line of text */}
+                      <Skeleton className="h-4 w-28 rounded-md" /> 
+                      <Skeleton className="h-3 w-40 rounded-md" /> 
+                      <Skeleton className="h-3 w-32 rounded-md" /> 
                     </div>
-                      <Skeleton className="h-10 w-10 rounded-xl" /> {/* Pencil icon skeleton */}
+                      <Skeleton className="h-10 w-10 rounded-xl" />
                   </>
                 ) : (
                   <>
@@ -676,7 +676,7 @@ export function ProjectView({ onCreateConversation, isLoading }: ProjectViewProp
                 )}
               </div>
             </div>
-          </Button>
+          </Button> */}
         </div>
 
         {/* 4. Chat History Section with heading */}

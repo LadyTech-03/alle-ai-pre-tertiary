@@ -277,7 +277,7 @@ export function ProjectsListModal({ isOpen, onClose }: ModalProps) {
                   <SearchX className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="font-medium text-lg mb-2">
-                  {searchQuery ? 'No matches found' : 'No projects yet'}
+                  {searchQuery ? 'No matches found' : 'No subjects yet for your class'}
                 </h3>
                 <p className="text-muted-foreground text-sm mb-4">
                   {searchQuery ? 

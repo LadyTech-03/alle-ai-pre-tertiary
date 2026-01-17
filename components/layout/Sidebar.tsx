@@ -1281,9 +1281,10 @@ export function Sidebar() {
                         <div className="flex flex-col min-w-0">
                           <span className="font-semibold text-sm text-foreground truncate">{user?.first_name}</span>
                           <span
-                            className="text-xs text-muted-foreground font-semibold rounded-md"
+                            className="text-xs text-muted-foreground font-bold rounded-md"
                           >
-                            {plan ? plan.split('_')[0].charAt(0).toUpperCase() + plan.split('_')[0].slice(1) : <Loader className="h-3 w-3 animate-spin" />}
+                            {/* {plan ? plan.split('_')[0].charAt(0).toUpperCase() + plan.split('_')[0].slice(1) : <Loader className="h-3 w-3 animate-spin" />} */}
+                            ALLE-AI EDU
                           </span>
                         </div>
                       </div>

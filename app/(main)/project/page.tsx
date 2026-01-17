@@ -183,9 +183,9 @@ export default function ProjectsPage() {
           <div className="rounded-full p-4 mb-4 bg-muted inline-flex items-center justify-center">
             <FolderOpen className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h1 className="text-xl font-semibold mb-2">No projects yet</h1>
+          <h1 className="text-xl font-semibold mb-2">No Subjects yet for this class</h1>
           <p className="text-sm text-muted-foreground">
-            Choose a project from the sidebar or create a new one
+            Contact your administrator to create subjects for your class.
           </p>
         </div>
       </div>
@@ -254,12 +254,12 @@ export default function ProjectsPage() {
                             <div className="flex items-start gap-3 mb-3">
                               <div className="shrink-0">
                                 <BsFolder2Open
-                                  className="size-6"
+                                  className="size-8"
                                   style={{ color: projectColor }}
                                 />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
+                                <h3 className={`font-semibold text-sm sm:text-base text-${projectColor} truncate`}>
                                   {project.name}
                                 </h3>
                                 {project.description && (
