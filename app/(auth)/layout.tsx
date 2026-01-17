@@ -88,7 +88,8 @@ export default function AuthLayout({
         }
       } else {
         // No code and no token
-        window.location.href = "https://app.alle-ai.com";
+        router.push('/')
+        // window.location.href = "https://app.alle-ai.com";
       }
     };
 
