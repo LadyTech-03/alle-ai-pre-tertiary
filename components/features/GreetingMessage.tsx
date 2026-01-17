@@ -178,7 +178,8 @@ const GreetingMessage = ({
       <div className="text-center space-y-4 mb-8">
         {
           (() => {
-            const name = user?.first_name ? `${user.first_name}!` : "there!";
+            // const name = user?.first_name ? `${user.first_name}!` : "there!";
+            const name = "Pascal!";
             const greeting = getTimeBasedGreeting(); // e.g., "Good morning"
             const [firstWord, secondWord] = greeting.split(" ");
             const secondWithComma = secondWord ? `${secondWord},` : ",";

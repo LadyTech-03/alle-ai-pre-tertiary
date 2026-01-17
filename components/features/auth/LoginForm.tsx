@@ -80,13 +80,19 @@ export function LoginForm() {
       exit="exit"
       className="space-y-6"
     >
+      {/* Header Section */}
+      <div className="space-y-2 mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Welcome Back</h1>
+        <p className="text-muted-foreground">Sign in to your account to continue</p>
+      </div>
+
       {/* Google Sign In */}
       <GoogleButton />
 
       {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-gray-300" />
+          <span className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-sm">
           <span className="bg-background px-2 text-muted-foreground">OR</span>
@@ -105,7 +111,7 @@ export function LoginForm() {
                   <Input
                     type="email"
                     placeholder="Email Address"
-                    className="border-borderColorPrimary focus-visible:outline-none"
+                    className="border-borderColorPrimary focus-visible:outline-none transition-colors h-10"
                     autoComplete="email"
                     {...field}
                   />
@@ -124,7 +130,7 @@ export function LoginForm() {
                   <Input
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
-                    className="border-borderColorPrimary focus-visible:outline-none"
+                    className="border-borderColorPrimary focus-visible:outline-none transition-colors h-10"
                     autoComplete="current-password"
                     {...field}
                   />
@@ -152,14 +158,15 @@ export function LoginForm() {
           </div>
 
           <Button 
-            variant="secondary"
             type="submit" 
-            className="w-full bg-black text-white"
+            className="w-full mt-8"
+            size="lg"
             disabled={isLoading}
           >
             {isLoading ? (
               <>
                 <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
               </>
             ) : (
               "Sign in"
@@ -169,13 +176,13 @@ export function LoginForm() {
       </Form>
 
       {/* Terms */}
-      <div className="text-center text-xs text-muted-foreground">
+      <div className="text-center text-xs text-muted-foreground border-t border-border pt-4">
         By continuing, you agree to Alle-AI&apos;s{" "}
-        <Link href="/terms-of-service" target="_blank" className="underline">
+        <Link href="/terms-of-service" target="_blank" className="underline hover:no-underline transition-colors">
           Terms of Service 
         </Link>{" "}
         &
-        {" "}<Link href="/privacy-policy" target="_blank" className="underline">
+        {" "}<Link href="/privacy-policy" target="_blank" className="underline hover:no-underline transition-colors">
            Privacy Policy
         </Link>
       </div>

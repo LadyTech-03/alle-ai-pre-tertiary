@@ -31,6 +31,7 @@ export default function AuthLayout({
   const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
   const { userId, setUserId } = useChatAPIStore();
   const { pending } = usePendingChatStateStore();
+  const [mounted, setMounted] = useState(false);
   // Check auth on mount
   useEffect(() => {
     const checkAuth = async () => {
@@ -98,16 +99,79 @@ export default function AuthLayout({
     checkAuth();
   }, [token]);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Don't render anything while checking auth
   if (authState === "checking" || authState === "redirect") {
     return <LoadingScreen />;
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left side - Auth Forms */}
-      <div className="w-full p-6 xs:p-10 md:mt-10">
-        {children}
+    <div className="flex min-h-screen bg-background">
+      {/* Left side - Branding Section */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/10 via-background to-background flex-col justify-between p-12 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -mr-40 -mt-40" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -ml-40 -mb-40" />
+        
+        {/* Content */}
+        <div className="relative z-10">
+          {/* Logo */}
+          <div className="flex items-center gap-2 mb-8">
+            <Image
+              src={"https://alle-ai-file-server.s3.us-east-1.amazonaws.com/profiles/P18kD3Ua2AUtbdaPTROaYZQm5xNfG1km4q7dTNXH.webp"}
+              alt="Logo"
+              width={150}
+              height={150}
+              className=""
+            />
+          </div>
+        </div>
+
+        {/* Description at bottom */}
+        <div className="relative z-10 space-y-4">
+          <h2 className="text-3xl font-bold">Welcome Back</h2>
+          <p className="text-lg text-muted-foreground">
+            Access your all-in-one AI platform. Compare, combine, and fact-check AI responses across multiple models.
+          </p>
+          <div className="space-y-3 pt-4">
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+              <span className="text-sm">Compare multiple AI models side-by-side</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+              <span className="text-sm">Fact-check and verify AI responses</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+              <span className="text-sm">Eliminate AI hallucinations</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right side - Auth Forms */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 xs:p-10 md:p-12">
+        <div className="w-full max-w-md">
+          {/* Logo for mobile */}
+          <div className="lg:hidden flex items-center justify-center gap-2 mb-12">
+            <Image
+              src={mounted && resolvedTheme === 'dark'
+                ? "/svgs/logo-desktop-full.webp"
+                : "/svgs/logo-desktop-dark-full.webp"}
+              alt="Logo"
+              width={160}
+              height={45}
+              className="h-8 w-auto"
+            />
+          </div>
+
+          {/* Form */}
+          {children}
+        </div>
       </div>
     </div>
   );

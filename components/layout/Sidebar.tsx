@@ -639,7 +639,8 @@ export function Sidebar() {
 
                 <>
                   <div className="flex-shrink-0 px-2">
-                    <div className="flex justify-between items-center mx-2 text-sm font-medium text-muted-foreground mb-2">
+                    <div className="flex flex-col gap-2 items-start mx-2 text-sm font-medium text-muted-foreground mb-2">
+                      <span>CLASS: BASIC 7 (JHS 1)</span>
                       <span>Subjects</span>
                     </div>
                   </div>

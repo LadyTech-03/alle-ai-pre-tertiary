@@ -105,38 +105,10 @@ function AuthPageInner() {
   }, []);
 
   return (
-    <div className="max-w-md mx-auto">
-      {/* Logo */}
-      <div className="flex items-center justify-center gap-2 mb-8">
-        <Image
-          src={logoSrc}
-          alt="alle-ai"
-          width={120}
-          height={120}
-          priority
-          placeholder="blur"
-          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRoaHSQrJyEwPENrLzA7YWNpPqRYXmWBgoaUaWpslmyChpmjj5qoj4+v/9j/"
-          className="transition-opacity duration-300"
-        />
-      </div>
-
-      {/* Heading */}
-      <h1 className="text-center text-lg font-semibold mb-6 min-h-[28px]">
-        {displayText}
-        <span className="animate-blink">|</span>
-      </h1>
-
-      {/* Auth form container */}
-      <div>
-        <h2 className="text-muted-foreground mb-6 text-center">
-          {authMode === 'login' && 'Login to your account'}
-          {authMode === 'create-session' && 'Start Your Session'}
-        </h2>
-
-        <AnimatePresence mode="wait">
-          {renderAuthContent()}
-        </AnimatePresence>
-      </div>
+    <div className="w-full">
+      <AnimatePresence mode="wait">
+        {renderAuthContent()}
+      </AnimatePresence>
     </div>
   );
 }

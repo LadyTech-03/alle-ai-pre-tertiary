@@ -139,11 +139,10 @@ export function SessionForm() {
             exit="exit"
             className="space-y-6"
         >
-            {/* Welcome Message */}
-            <div className="text-center space-y-2 mb-6">
-                <div className="flex items-center justify-center gap-2 text-4xl mb-3">
-                    <Image src="/svgs/college_logo.png" alt="Logo" width={200} height={200} />
-                </div>
+            {/* Header Section */}
+            <div className="space-y-2 mb-8">
+                <h1 className="text-3xl font-bold tracking-tight">Start Your Session</h1>
+                <p className="text-muted-foreground">Enter your details to begin your learning experience</p>
             </div>
 
             {/* Session Form */}
@@ -157,11 +156,11 @@ export function SessionForm() {
                                 <FormLabel className="text-sm font-medium">Your Name</FormLabel>
                                 <FormControl>
                                     <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                         <Input
                                             type="text"
                                             placeholder="Enter your full name"
-                                            className="pl-10 border-borderColorPrimary focus-visible:outline-none"
+                                            className="pl-10 border-borderColorPrimary focus-visible:outline-none transition-colors"
                                             autoComplete="name"
                                             {...field}
                                         />
@@ -180,16 +179,16 @@ export function SessionForm() {
                                 <FormLabel className="text-sm font-medium">Your Class</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value} disabled={isClassesLoading}>
                                     <FormControl>
-                                        <SelectTrigger className="border-borderColorPrimary focus-visible:outline-none">
+                                        <SelectTrigger className="border-borderColorPrimary focus-visible:outline-none transition-colors">
                                             <div className="flex items-center gap-2">
                                                 <GraduationCap className="h-4 w-4 text-muted-foreground" />
                                                 <SelectValue placeholder={isClassesLoading ? "Loading Classes..." : "Select your class"} />
                                             </div>
                                         </SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>
+                                    <SelectContent className="bg-background border-borderColorPrimary">
                                         {classOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value}>
+                                            <SelectItem key={option.value} value={option.value} className="cursor-pointer">
                                                 {option.label}
                                             </SelectItem>
                                         ))}
@@ -202,8 +201,9 @@ export function SessionForm() {
 
                     <Button
                         type="submit"
-                        className="w-full"
+                        className="w-full mt-8"
                         disabled={isLoading}
+                        size="lg"
                     >
                         {isLoading ? (
                             <>
@@ -218,7 +218,7 @@ export function SessionForm() {
             </Form>
 
             {/* Footer Note */}
-            <div className="text-center text-xs text-muted-foreground pt-4">
+            <div className="text-center text-xs text-muted-foreground pt-4 border-t border-border">
                 <p>Your session will be active during this computer use</p>
             </div>
         </motion.div>
