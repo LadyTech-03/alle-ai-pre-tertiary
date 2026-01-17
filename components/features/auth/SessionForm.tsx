@@ -140,8 +140,8 @@ export function SessionForm() {
             className="space-y-6"
         >
             {/* Header Section */}
-            <div className="space-y-2 mb-8">
-                <h1 className="text-3xl font-bold tracking-tight">Start Your Session</h1>
+            <div className="flex flex-col items-center gap-2 justify-center mb-8">
+                <Image src="/svgs/logo-desktop-full.webp" alt="Logo" width={100} height={100} className="mx-auto" />
                 <p className="text-muted-foreground">to begin your learning experience with multiple models</p>
             </div>
 
