@@ -56,8 +56,9 @@ const classOptionsMock: Option[] = [
     { value: "basic-4", label: "Basic 4" },
     { value: "basic-5", label: "Basic 5" },
     { value: "basic-6", label: "Basic 6" },
-    { value: "basic-7", label: "Basic 7" },
-    { value: "basic-8", label: "Basic 8" },
+    { value: "basic-7", label: "Basic 7 (JHS 1)" },
+    { value: "basic-8", label: "Basic 8 (JHS 2)" },
+    { value: "basic-9", label: "Basic 9 (JHS 3)" },
 ];
 
 export function SessionForm() {
