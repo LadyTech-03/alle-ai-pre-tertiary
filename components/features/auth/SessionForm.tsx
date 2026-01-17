@@ -49,6 +49,17 @@ interface Option {
     label: string;
 }
 
+const classOptionsMock: Option[] = [
+    { value: "basic-1", label: "Basic 1" },
+    { value: "basic-2", label: "Basic 2" },
+    { value: "basic-3", label: "Basic 3" },
+    { value: "basic-4", label: "Basic 4" },
+    { value: "basic-5", label: "Basic 5" },
+    { value: "basic-6", label: "Basic 6" },
+    { value: "basic-7", label: "Basic 7" },
+    { value: "basic-8", label: "Basic 8" },
+];
+
 export function SessionForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [isClassesLoading, setIsClassesLoading] = useState(true);
@@ -68,14 +79,17 @@ export function SessionForm() {
     useEffect(() => {
         const fetchClasses = async () => {
             try {
-                const response = await orgDeviceApi.getClassGroups(orgId!);
-                if (response.status && response.data) {
-                    const options = response.data.map((group) => ({
-                        value: group.slug,
-                        label: group.name,
-                    }));
-                    setClassOptions(options);
-                }
+                // Use Mockd data for class options
+                setClassOptions(classOptionsMock);
+                // Fetch class groups from API
+                // const response = await orgDeviceApi.getClassGroups(orgId!);
+                // if (response.status && response.data) {
+                //     const options = response.data.map((group) => ({
+                //         value: group.slug,
+                //         label: group.name,
+                //     }));
+                //     setClassOptions(options);
+                // }
             } catch (error) {
                 console.error("Failed to fetch class groups:", error);
                 // toast.error("Failed to load class options");
@@ -92,21 +106,23 @@ export function SessionForm() {
 
         try {
             // Call the start device session API
-            const response = await orgDeviceApi.startSession(orgId!, {
-                name: data.name,
-                class: data.class
-            });
+            // const response = await orgDeviceApi.startSession(orgId!, {
+            //     name: data.name,
+            //     class: data.class
+            // });
 
-            if (response.success && response.to === "edu_device_chat") {
-                // Store session details
-                useOrgSessionStore.getState().setDeviceSessionId(response.device_session);
-                useOrgSessionStore.getState().setSessionUser(response.session_user);
+                router.push("/project")
 
-                // Redirect to project page on success
-                router.push("/project");
-            } else {
-                setIsLoading(false);
-            }
+            // if (response.success && response.to === "edu_device_chat") {
+            //     // Store session details
+            //     useOrgSessionStore.getState().setDeviceSessionId(response.device_session);
+            //     useOrgSessionStore.getState().setSessionUser(response.session_user);
+
+            //     // Redirect to project page on success
+            //     router.push("/project");
+            // } else {
+            //     setIsLoading(false);
+            // }
         } catch (error: any) {
             // console.error("Session creation error:", error);
             setIsLoading(false);
