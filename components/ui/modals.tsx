@@ -3830,10 +3830,10 @@ export function ProjectFilesModal({ isOpen, onClose, projectName}: ProjectModalP
   const processFile = async (file: File) => {
     if (!currentProject?.uuid) return;
 
-    if (fileUploadLimitError) {
-      setPlansModalOpen(true);
-      return;
-    }
+    // if (fileUploadLimitError) {
+    //   setPlansModalOpen(true);
+    //   return;
+    // }
     
     try {
       // Validate file type
@@ -4000,7 +4000,7 @@ export function ProjectFilesModal({ isOpen, onClose, projectName}: ProjectModalP
             <DialogTitle>Project files</DialogTitle>
           </DialogHeader>
 
-          {plan === 'free' && (
+          {plan === 'freee' && (
             <div className="text-sm text-orange-500">
               Free users can only upload one file. Please upgrade plan to upload more files.
             </div>

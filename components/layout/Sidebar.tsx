@@ -711,9 +711,9 @@ export function Sidebar() {
                                     </div>
 
                                     {/* Right controls */}
-                                    <div className="flex items-center gap-1 pl-2">
+                                    <div className="flex items-center gap-1">
                                       <CollapsibleTrigger asChild>
-                                        <div className="p-1.5 rounded-md text-muted-foreground/50 group-hover:text-muted-foreground hover:bg-background/80 transition-all">
+                                        <div className="p-1 rounded-md text-muted-foreground/50 group-hover:text-muted-foreground hover:bg-background/80 transition-all">
                                           <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${expandedProjects[project.uuid] ? 'rotate-90' : ''}`} />
                                         </div>
                                       </CollapsibleTrigger>
