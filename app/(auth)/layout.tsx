@@ -120,8 +120,8 @@ export default function AuthLayout({
             <Image
               src={"https://alle-ai-file-server.s3.us-east-1.amazonaws.com/profiles/P18kD3Ua2AUtbdaPTROaYZQm5xNfG1km4q7dTNXH.webp"}
               alt="Logo"
-              width={100}
-              height={100}
+              width={70}
+              height={70}
               className=""
             />
             <span className="text-2xl font-bold">GHANA SCHOOL</span>
@@ -137,15 +137,15 @@ export default function AuthLayout({
           <div className="space-y-3 pt-4">
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <span className="text-sm">Compare multiple AI models side-by-side</span>
+              <span className="text-sm">Full access to all AI models, tools, and features for students and faculty.</span>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <span className="text-sm">Fact-check and verify AI responses</span>
+              <span className="text-sm">Curriculum aligned with national standards</span>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <span className="text-sm">Eliminate AI hallucinations</span>
+              <span className="text-sm">Reduce AI hallucinations</span>
             </div>
           </div>
         </div>

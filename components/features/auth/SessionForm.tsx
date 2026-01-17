@@ -140,9 +140,9 @@ export function SessionForm() {
             className="space-y-6"
         >
             {/* Header Section */}
-            <div className="flex flex-col items-center gap-2 justify-center mb-8">
-                <Image src="/svgs/logo-desktop-full.webp" alt="Logo" width={100} height={100} className="mx-auto" />
-                <p className="text-muted-foreground">to begin your learning experience with multiple models</p>
+            <div className="flex flex-col items-center gap-4 justify-center mb-8">
+                <Image src="/svgs/logo-desktop-full.webp" alt="Logo" width={120} height={100} className="mx-auto" />
+                <p className="text-muted-foreground">Start learning with multiple models</p>
             </div>
 
             {/* Session Form */}
