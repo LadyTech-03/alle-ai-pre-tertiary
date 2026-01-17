@@ -142,7 +142,7 @@ export function SessionForm() {
             {/* Header Section */}
             <div className="space-y-2 mb-8">
                 <h1 className="text-3xl font-bold tracking-tight">Start Your Session</h1>
-                <p className="text-muted-foreground">Enter your details to begin your learning experience</p>
+                <p className="text-muted-foreground">to begin your learning experience with multiple models</p>
             </div>
 
             {/* Session Form */}

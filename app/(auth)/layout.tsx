@@ -111,10 +111,7 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-screen bg-background">
       {/* Left side - Branding Section */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/10 via-background to-background flex-col justify-between p-12 relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -mr-40 -mt-40" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -ml-40 -mb-40" />
+      <div className="hidden lg:flex lg:w-1/2 bg-backgroundSecondary flex-col justify-between p-12 relative overflow-hidden">
         
         {/* Content */}
         <div className="relative z-10">
@@ -123,18 +120,19 @@ export default function AuthLayout({
             <Image
               src={"https://alle-ai-file-server.s3.us-east-1.amazonaws.com/profiles/P18kD3Ua2AUtbdaPTROaYZQm5xNfG1km4q7dTNXH.webp"}
               alt="Logo"
-              width={150}
-              height={150}
+              width={100}
+              height={100}
               className=""
             />
+            <span className="text-2xl font-bold">GHANA SCHOOL</span>
           </div>
         </div>
 
         {/* Description at bottom */}
         <div className="relative z-10 space-y-4">
-          <h2 className="text-3xl font-bold">Welcome Back</h2>
+          <h2 className="text-3xl font-bold">ALLE-AI EDU</h2>
           <p className="text-lg text-muted-foreground">
-            Access your all-in-one AI platform. Compare, combine, and fact-check AI responses across multiple models.
+           Educational licensing for universities and academic institutions that need reliable AI
           </p>
           <div className="space-y-3 pt-4">
             <div className="flex items-start gap-3">
