@@ -697,7 +697,7 @@ export function Sidebar() {
                                           </div>
                                         ) : (
                                           <>
-                                            <span className="text-sm font-bold truncate text-foreground group-hover:text-foreground">
+                                            <span className="text-xs font-bold truncate text-foreground group-hover:text-foreground">
                                               <TextStream
                                                 text={project.name}
                                                 className="truncate"

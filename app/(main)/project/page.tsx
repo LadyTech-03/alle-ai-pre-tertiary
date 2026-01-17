@@ -290,7 +290,7 @@ export default function ProjectsPage() {
                   <div className="space-y-2">
                     {projects.map((project) => {
                       const conversationCount = project.histories?.length || 0;
-                      const fileCount = project.files?.length || 0;
+                      const fileCount = project.files?.length || 10;
                       const projectColor = project.color || "";
 
                       return (
