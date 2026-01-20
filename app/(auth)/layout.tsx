@@ -37,37 +37,43 @@ export default function AuthLayout({
     const checkAuth = async () => {
       // 1. Get code from URL
       const searchParams = new URLSearchParams(window.location.search);
-      const exchange_token = searchParams.get('aiptotp');
-      const orgId = searchParams.get('org_id');
+      const exchange_token = searchParams.get("aiptotp");
+      const orgId = searchParams.get("org_id");
 
       // If code exists, exchange it for token
       if (exchange_token && orgId) {
         try {
           const response = await authApi.exchangeCode(exchange_token, orgId);
-          console.log(response, 'What I`ve done');
-          return
-          // if (response.status && response.data.token) {
-          //   setAuth(response.data.user, response.data.token, response.data.plan);
+          // console.log(response, "What I`ve done");
+          if (response.status && response.data.token) {
+            setAuth(
+              response.data.user,
+              response.data.token,
+              response.data.plan,
+            );
 
-          //   // Set Organization ID if present
-          //   if (orgId) {
-          //     useOrgSessionStore.getState().setOrgId(orgId);
-          //   }
+            // Set Organization ID if present
+            if (orgId) {
+              useOrgSessionStore.getState().setOrgId(orgId);
+              useOrgSessionStore
+                .getState()
+                .setOrganisationDetails(response.organisationDetails || null);
+            }
 
-          //   // Clean URL
-          //   const url = new URL(window.location.href);
-          //   url.searchParams.delete('aiptotp');
-          //   url.searchParams.delete('org_id');
-          //   window.history.replaceState({}, '', url.toString());
+            // Clean URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete("aiptotp");
+            url.searchParams.delete("org_id");
+            window.history.replaceState({}, "", url.toString());
 
-          //   router.push("/auth?mode=create-session");
-          //   setAuthState("show-auth");
-          //   return;
-          // }
+            router.push("/auth?mode=create-session");
+            // setAuthState("show-auth");
+            return;
+          }
         } catch (error) {
-          console.error("Code exchange failed:", error);
+          // console.error("Code exchange failed:", error);
           clearAuth();
-          window.location.href = "https://app.alle-ai.com";
+          window.location.href = `${process.env.NEXT_PUBLIC_APP_URL}`;
           return;
         }
       }
@@ -83,16 +89,15 @@ export default function AuthLayout({
             setAuthState("show-auth");
           }
         } catch (error) {
-          console.error("Token validation failed:", error);
+          // console.error("Token validation failed:", error);
           clearAuth();
-          window.location.href = "https://app.alle-ai.com";
+          window.location.href = `${process.env.NEXT_PUBLIC_APP_URL}`;
         }
       } else {
         // No code and no token
-        router.push('/')
+        router.push("/");
         setAuthState("show-auth");
-
-        // window.location.href = "https://app.alle-ai.com";
+        window.location.href = `${process.env.NEXT_PUBLIC_APP_URL}`;
       }
     };
 
@@ -112,13 +117,14 @@ export default function AuthLayout({
     <div className="flex min-h-screen bg-background">
       {/* Left side - Branding Section */}
       <div className="hidden lg:flex lg:w-1/2 bg-backgroundSecondary flex-col justify-between p-12 relative overflow-hidden">
-        
         {/* Content */}
         <div className="relative z-10">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
             <Image
-              src={"https://alle-ai-file-server.s3.us-east-1.amazonaws.com/profiles/P18kD3Ua2AUtbdaPTROaYZQm5xNfG1km4q7dTNXH.webp"}
+              src={
+                "https://alle-ai-file-server.s3.us-east-1.amazonaws.com/profiles/P18kD3Ua2AUtbdaPTROaYZQm5xNfG1km4q7dTNXH.webp"
+              }
               alt="Logo"
               width={70}
               height={70}
@@ -132,16 +138,22 @@ export default function AuthLayout({
         <div className="relative z-10 space-y-4">
           <h2 className="text-3xl font-bold">ALLE-AI EDU</h2>
           <p className="text-lg text-muted-foreground">
-           Educational licensing for universities and academic institutions that need reliable AI
+            Educational licensing for universities and academic institutions
+            that need reliable AI
           </p>
           <div className="space-y-3 pt-4">
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <span className="text-sm">Full access to all AI models, tools, and features for students and faculty.</span>
+              <span className="text-sm">
+                Full access to all AI models, tools, and features for students
+                and faculty.
+              </span>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <span className="text-sm">Curriculum aligned with national standards</span>
+              <span className="text-sm">
+                Curriculum aligned with national standards
+              </span>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 rounded-full bg-primary mt-2" />
@@ -157,9 +169,11 @@ export default function AuthLayout({
           {/* Logo for mobile */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-12">
             <Image
-              src={mounted && resolvedTheme === 'dark'
-                ? "/svgs/logo-desktop-full.webp"
-                : "/svgs/logo-desktop-dark-full.webp"}
+              src={
+                mounted && resolvedTheme === "dark"
+                  ? "/svgs/logo-desktop-full.webp"
+                  : "/svgs/logo-desktop-dark-full.webp"
+              }
               alt="Logo"
               width={160}
               height={45}

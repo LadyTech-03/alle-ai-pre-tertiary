@@ -5,7 +5,7 @@ import { authApi } from '@/lib/api/auth';
 import { User } from '@/lib/api/auth';
 import { toast } from "sonner";
 import { HistoryItem } from '@/lib/api/history';
-
+import { OrganisationDetails } from "@/lib/api/auth";
 import { driveService } from '@/lib/services/driveServices';
 
 import { useModelsStore } from "./models";
@@ -1405,6 +1405,8 @@ interface OrgSessionStore {
   orgId: string | null;
   setOrgId: (id: string | null) => void;
   clearSession: () => void;
+  organisationDetails: OrganisationDetails | null;
+  setOrganisationDetails: (details: OrganisationDetails | null) => void;
 }
 
 export const useOrgSessionStore = create<OrgSessionStore>()(
@@ -1416,7 +1418,8 @@ export const useOrgSessionStore = create<OrgSessionStore>()(
       setDeviceSessionId: (id) => set({ deviceSessionId: id }),
       setSessionUser: (user) => set({ sessionUser: user }),
       setOrgId: (id) => set({ orgId: id }),
-      clearSession: () => set({ deviceSessionId: null, sessionUser: null, orgId: null }),
+      clearSession: () => set({ deviceSessionId: null, sessionUser: null, orgId: null, organisationDetails: null }),
+      setOrganisationDetails: (details) => set({ organisationDetails: details }),
     }),
     {
       name: 'org-session-storage',

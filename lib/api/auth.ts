@@ -1,5 +1,5 @@
-import { toast } from 'sonner';
-import api from './axios';
+import { toast } from "sonner";
+import api from "./axios";
 
 export interface LoginCredentials {
   email: string;
@@ -47,6 +47,14 @@ export interface AuthResponse {
   message: string;
   plan: string | null;
 }
+export interface OrganisationDetails {
+  id: number;
+  name: string;
+  slug: string;
+  logo_url: string;
+  website_url: string;
+  organisation_plan: string;
+}
 
 export interface LoginResponse {
   status: boolean;
@@ -69,7 +77,8 @@ export interface LoginResponse {
       email_verified_at?: string | null;
       survey_remind?: boolean;
     };
-  }
+  };
+  organisationDetails?: OrganisationDetails;
 }
 
 interface ForgotPasswordResponse {
@@ -169,19 +178,23 @@ export interface User {
 
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
-    const response = await api.post('/login', credentials);
+    const response = await api.post("/login", credentials);
     // console.log('login response data', response.data);
     return response.data;
   },
 
-  register: async (credentials: RegisterCredentials): Promise<RegisterResponse> => {
-    const response = await api.post('/register', credentials);
+  register: async (
+    credentials: RegisterCredentials,
+  ): Promise<RegisterResponse> => {
+    const response = await api.post("/register", credentials);
     // console.log('register data', response.data);
     return response.data;
   },
 
   exchangeCode: async (code: string, orgId: string): Promise<LoginResponse> => {
-    const response = await api.post(`/organisations/${orgId}/code-exchange`, { code });
+    const response = await api.post(`/organisations/${orgId}/code-exchange`, {
+      exchange_token: code,
+    });
     return response.data;
   },
 
@@ -197,20 +210,20 @@ export const authApi = {
   },
 
   logout: async () => {
-    const response = await api.post('/logout');
+    const response = await api.post("/logout");
     // console.log(response,'logged out')
     return response.data;
   },
 
   getUser: async (): Promise<AuthResponse> => {
-    const response = await api.post('/auth');
+    const response = await api.post("/auth");
     // console.log('checked', response.data);
     return response.data;
   },
 
   verifyEmail: async (data: { code: string }) => {
     try {
-      const response = await api.post('/email/verify', data);
+      const response = await api.post("/email/verify", data);
       // console.log('verification data', response);
       return response.data;
     } catch (error: any) {
@@ -226,10 +239,10 @@ export const authApi = {
 
   resendVerification: async (): Promise<ResendVerificationResponse> => {
     try {
-      const response = await api.post('/resend/code');
+      const response = await api.post("/resend/code");
       if (!response.data.status) {
-        toast.error(response.data.message || 'Failed to send code');
-        throw new Error(response.data.message || 'Failed to send code');
+        toast.error(response.data.message || "Failed to send code");
+        throw new Error(response.data.message || "Failed to send code");
       }
       return response.data;
     } catch (error: any) {
@@ -239,7 +252,7 @@ export const authApi = {
   },
 
   forgotPassword: async (email: string): Promise<ForgotPasswordResponse> => {
-    const response = await api.post('/forgot-password', { email });
+    const response = await api.post("/forgot-password", { email });
     return response.data;
   },
 
@@ -247,22 +260,22 @@ export const authApi = {
     token: string;
     email: string;
     password: string;
-    password_confirmation: string
+    password_confirmation: string;
   }) => {
-    const response = await api.post('/reset-password', data);
+    const response = await api.post("/reset-password", data);
     return response.data;
   },
 
   verifyResetToken: async (data: { email: string; token: string }) => {
-    const response = await api.post('/verify/token', data);
+    const response = await api.post("/verify/token", data);
     return response.data;
   },
 
   checkout: async (data: {
-    plan: 'free' | 'standard' | 'plus' | 'custom' | 'pro';
-    billing_cycle: 'monthly' | 'yearly';
+    plan: "free" | "standard" | "plus" | "custom" | "pro";
+    billing_cycle: "monthly" | "yearly";
   }): Promise<CheckoutResponse> => {
-    const response = await api.post('/checkout', data);
+    const response = await api.post("/checkout", data);
     return response.data;
   },
 
@@ -273,23 +286,29 @@ export const authApi = {
     anchor_now: boolean;
   }): Promise<SwitchSubscriptionResponse> => {
     // console.log('switchSubscription data', data);
-    const response = await api.post('/subscription/switch', data);
+    const response = await api.post("/subscription/switch", data);
     return response.data;
   },
 
-  cancelSubscription: async (data: { immediately: boolean }): Promise<CancelSubscriptionResponse> => {
-    const response = await api.post('/subscription/cancel', data);
+  cancelSubscription: async (data: {
+    immediately: boolean;
+  }): Promise<CancelSubscriptionResponse> => {
+    const response = await api.post("/subscription/cancel", data);
     return response.data;
   },
 
   deleteAccount: async (password: string): Promise<DeleteAccountResponse> => {
-    const response = await api.post('/delete-account', { password });
+    const response = await api.post("/delete-account", { password });
     return response.data;
   },
 
-  getBillingPortal: async (returnUrl: string): Promise<BillingPortalResponse> => {
+  getBillingPortal: async (
+    returnUrl: string,
+  ): Promise<BillingPortalResponse> => {
     try {
-      const response = await api.post('/billing-portal', { return_url: returnUrl });
+      const response = await api.post("/billing-portal", {
+        return_url: returnUrl,
+      });
       return response.data;
     } catch (error) {
       // console.error('Error accessing billing portal:', error);
@@ -303,7 +322,7 @@ export const authApi = {
     prorate: boolean;
     anchor_now: boolean;
   }): Promise<ProrationDetailsResponse> => {
-    const response = await api.post('/subscription/proration_details', data);
+    const response = await api.post("/subscription/proration_details", data);
     return response.data;
   },
 
@@ -312,7 +331,7 @@ export const authApi = {
     next_billing_date?: string;
     message?: string;
   }> => {
-    const response = await api.get('/nextBillingDate');
+    const response = await api.get("/nextBillingDate");
     return response.data;
   },
 
@@ -320,7 +339,7 @@ export const authApi = {
     status: boolean;
     message?: string;
   }> => {
-    const response = await api.post('/keep-subscription');
+    const response = await api.post("/keep-subscription");
     return response.data;
   },
 };
