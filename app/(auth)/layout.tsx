@@ -45,25 +45,25 @@ export default function AuthLayout({
         try {
           const response = await authApi.exchangeCode(exchange_token, orgId);
           console.log(response, 'What I`ve done');
-          return
-          // if (response.status && response.data.token) {
-          //   setAuth(response.data.user, response.data.token, response.data.plan);
+          // return
+          if (response.status && response.data.token) {
+            setAuth(response.data.user, response.data.token, response.data.plan);
 
-          //   // Set Organization ID if present
-          //   if (orgId) {
-          //     useOrgSessionStore.getState().setOrgId(orgId);
-          //   }
+            // Set Organization ID if present
+            if (orgId) {
+              useOrgSessionStore.getState().setOrgId(orgId);
+            }
 
-          //   // Clean URL
-          //   const url = new URL(window.location.href);
-          //   url.searchParams.delete('aiptotp');
-          //   url.searchParams.delete('org_id');
-          //   window.history.replaceState({}, '', url.toString());
+            // Clean URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete('aiptotp');
+            url.searchParams.delete('org_id');
+            window.history.replaceState({}, '', url.toString());
 
-          //   router.push("/auth?mode=create-session");
-          //   setAuthState("show-auth");
-          //   return;
-          // }
+            router.push("/auth?mode=create-session");
+            setAuthState("show-auth");
+            return;
+          }
         } catch (error) {
           console.error("Code exchange failed:", error);
           clearAuth();
@@ -124,7 +124,7 @@ export default function AuthLayout({
               height={70}
               className=""
             />
-            <span className="text-2xl font-bold">GHANA SCHOOL</span>
+            <span className="text-2xl font-bold">GH SCHOOL</span>
           </div>
         </div>
 
