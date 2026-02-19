@@ -1,46 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ComponentType, Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { useProjectStore, useSidebarStore } from "@/stores";
 import { projectApi } from "@/lib/api/project";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader, GraduationCap, BrainCircuit, Users, Trophy, FileQuestion, ClipboardList, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-type UserRole = "student" | "teacher";
-type StudentExamMode = "flashcards" | "theory" | "mcq";
-type StudentDifficulty = "adaptive" | "easy" | "medium" | "hard";
-
-type SubjectOption = {
-  id: string;
-  name: string;
-  description: string;
-  color?: string;
-};
-
-type QuestionMix = {
-  mcq: boolean;
-  theory: boolean;
-  flashcards: boolean;
-};
+import { Loader, GraduationCap, BrainCircuit, Users } from "lucide-react";
+import { StudentExamPrep } from "@/components/features/exam-prep/StudentExamPrep";
+import { TeacherExamPrep } from "@/components/features/exam-prep/TeacherExamPrep";
+import type { SubjectOption, UserRole } from "@/components/features/exam-prep/types";
 
 const fallbackSubjects: SubjectOption[] = [
   { id: "english", name: "English Language", description: "Grammar, writing and comprehension", color: "#0ea5e9" },
@@ -49,51 +20,12 @@ const fallbackSubjects: SubjectOption[] = [
   { id: "social", name: "Social Studies", description: "Civic and contextual understanding", color: "#f97316" },
 ];
 
-const studentModes: Array<{ id: StudentExamMode; label: string; icon: ComponentType<{ className?: string }>; note: string }> = [
-  { id: "flashcards", label: "Flash Cards", icon: Trophy, note: "Gamified recall rounds" },
-  { id: "theory", label: "Theory", icon: BrainCircuit, note: "Deep answer practice" },
-  { id: "mcq", label: "MCQ/Objectives", icon: FileQuestion, note: "Timed objective sets" },
-];
-
-const difficultyLabels: Record<StudentDifficulty, string> = {
-  adaptive: "Adaptive",
-  easy: "Easy",
-  medium: "Medium",
-  hard: "Hard",
-};
-
 export default function ExamPrepPage() {
   const router = useRouter();
   const { isOpen } = useSidebarStore();
   const { projects, setProjects, setLoading, isLoading } = useProjectStore();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-
   const [role, setRole] = useState<UserRole>("student");
-
-  const [studentMode, setStudentMode] = useState<StudentExamMode>("flashcards");
-  const [studentDifficulty, setStudentDifficulty] = useState<StudentDifficulty>("adaptive");
-  const [studentQuestions, setStudentQuestions] = useState<number[]>([20]);
-  const [studentDuration, setStudentDuration] = useState<number[]>([35]);
-  const [studentSubjects, setStudentSubjects] = useState<string[]>([]);
-  const [studentTimed, setStudentTimed] = useState(true);
-  const [studentHints, setStudentHints] = useState(true);
-  const [studentExplanations, setStudentExplanations] = useState(true);
-
-  const [teacherTitle, setTeacherTitle] = useState("Basic 7 Revision Pack");
-  const [teacherInstructions, setTeacherInstructions] = useState(
-    "Answer all questions and show your working where necessary."
-  );
-  const [teacherQuestions, setTeacherQuestions] = useState<number[]>([25]);
-  const [teacherDuration, setTeacherDuration] = useState<number[]>([45]);
-  const [teacherSubjects, setTeacherSubjects] = useState<string[]>([]);
-  const [teacherQuestionMix, setTeacherQuestionMix] = useState<QuestionMix>({
-    mcq: true,
-    theory: true,
-    flashcards: false,
-  });
-  const [teacherShuffle, setTeacherShuffle] = useState(true);
-  const [teacherAllowRetry, setTeacherAllowRetry] = useState(false);
-  const [teacherPublishNow, setTeacherPublishNow] = useState(false);
 
   const subjects = useMemo<SubjectOption[]>(() => {
     if (projects.length > 0) {
@@ -143,24 +75,6 @@ export default function ExamPrepPage() {
     loadProjects();
   }, [projects.length, setLoading, setProjects]);
 
-  useEffect(() => {
-    if (subjects.length === 0) return;
-
-    if (studentSubjects.length === 0) {
-      setStudentSubjects(subjects.slice(0, Math.min(3, subjects.length)).map((subject) => subject.id));
-    }
-
-    if (teacherSubjects.length === 0) {
-      setTeacherSubjects(subjects.slice(0, Math.min(2, subjects.length)).map((subject) => subject.id));
-    }
-  }, [subjects, studentSubjects.length, teacherSubjects.length]);
-
-  const toggleIds = (target: string, setter: Dispatch<SetStateAction<string[]>>) => {
-    setter((prev) => (prev.includes(target) ? prev.filter((id) => id !== target) : [...prev, target]));
-  };
-
-  const activeTeacherFormats = Object.values(teacherQuestionMix).filter(Boolean).length;
-
   if (isInitialLoading || isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -184,7 +98,7 @@ export default function ExamPrepPage() {
                       Exam Prep Workspace
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Toggle between Student and Teacher experiences using local state only.
+                      Toggle between Student and Teacher interfaces. Backend wiring comes later.
                     </p>
                   </div>
 
@@ -216,284 +130,9 @@ export default function ExamPrepPage() {
             </Card>
 
             {role === "student" ? (
-              <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
-                <Card className="border-borderColorPrimary bg-backgroundSecondary">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">Student Practice Setup</CardTitle>
-                    <CardDescription>
-                      Build an exam prep session with mode, difficulty, timing and support controls.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid gap-3 md:grid-cols-3">
-                      {studentModes.map((mode) => {
-                        const Icon = mode.icon;
-                        const active = studentMode === mode.id;
-                        return (
-                          <button
-                            key={mode.id}
-                            type="button"
-                            onClick={() => setStudentMode(mode.id)}
-                            className={cn(
-                              "rounded-lg border p-4 text-left",
-                              active
-                                ? "border-primary bg-secondary"
-                                : "border-borderColorPrimary bg-background hover:bg-secondary/60"
-                            )}
-                          >
-                            <Icon className="h-4 w-4 mb-2" />
-                            <p className="text-sm font-semibold">{mode.label}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{mode.note}</p>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Subjects</Label>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {subjects.map((subject) => {
-                          const selected = studentSubjects.includes(subject.id);
-                          return (
-                            <button
-                              key={subject.id}
-                              type="button"
-                              onClick={() => toggleIds(subject.id, setStudentSubjects)}
-                              className={cn(
-                                "rounded-lg border px-3 py-2 text-left",
-                                selected
-                                  ? "border-primary bg-secondary"
-                                  : "border-borderColorPrimary bg-background"
-                              )}
-                            >
-                              <p className="text-sm font-medium">{subject.name}</p>
-                              <p className="text-xs text-muted-foreground">{subject.description}</p>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2 rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <Label className="text-xs text-muted-foreground">Difficulty</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {(Object.keys(difficultyLabels) as StudentDifficulty[]).map((difficulty) => (
-                            <Button
-                              key={difficulty}
-                              size="sm"
-                              variant={studentDifficulty === difficulty ? "secondary" : "outline"}
-                              onClick={() => setStudentDifficulty(difficulty)}
-                            >
-                              {difficultyLabels[difficulty]}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <Label className="text-xs text-muted-foreground">Focus</Label>
-                        <Select defaultValue="mixed">
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="mixed">Mixed Topics</SelectItem>
-                            <SelectItem value="weak">Weak Topics First</SelectItem>
-                            <SelectItem value="recent">Recent Topics</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Questions</span>
-                          <span>{studentQuestions[0]}</span>
-                        </div>
-                        <Slider min={5} max={60} step={5} value={studentQuestions} onValueChange={setStudentQuestions} />
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Duration</span>
-                          <span>{studentTimed ? `${studentDuration[0]}m` : "Untimed"}</span>
-                        </div>
-                        <Slider min={10} max={120} step={5} disabled={!studentTimed} value={studentDuration} onValueChange={setStudentDuration} />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm">Timed Mode</p>
-                          <Switch checked={studentTimed} onCheckedChange={setStudentTimed} />
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm">Hints</p>
-                          <Switch checked={studentHints} onCheckedChange={setStudentHints} />
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm">Explanations</p>
-                          <Switch checked={studentExplanations} onCheckedChange={setStudentExplanations} />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-borderColorPrimary bg-backgroundSecondary">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Session Preview</CardTitle>
-                    <CardDescription>Configuration summary before launch.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <p className="text-xs text-muted-foreground">Questions</p>
-                        <p className="text-xl font-semibold">{studentQuestions[0]}</p>
-                      </div>
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <p className="text-xs text-muted-foreground">Duration</p>
-                        <p className="text-xl font-semibold">{studentTimed ? `${studentDuration[0]}m` : "Untimed"}</p>
-                      </div>
-                    </div>
-                    <Button className="w-full">
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Start Practice
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
+              <StudentExamPrep subjects={subjects} />
             ) : (
-              <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
-                <Card className="border-borderColorPrimary bg-backgroundSecondary">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">Teacher Question Builder</CardTitle>
-                    <CardDescription>Create and assign exam prep packs to students.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="exam-title">Exam Title</Label>
-                      <Input id="exam-title" value={teacherTitle} onChange={(event) => setTeacherTitle(event.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="exam-inst">Instructions</Label>
-                      <Textarea id="exam-inst" value={teacherInstructions} onChange={(event) => setTeacherInstructions(event.target.value)} className="min-h-[96px]" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Subjects</Label>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {subjects.map((subject) => {
-                          const selected = teacherSubjects.includes(subject.id);
-                          return (
-                            <button
-                              key={subject.id}
-                              type="button"
-                              onClick={() => toggleIds(subject.id, setTeacherSubjects)}
-                              className={cn(
-                                "rounded-lg border px-3 py-2 text-left",
-                                selected
-                                  ? "border-primary bg-secondary"
-                                  : "border-borderColorPrimary bg-background"
-                              )}
-                            >
-                              <p className="text-sm font-medium">{subject.name}</p>
-                              <p className="text-xs text-muted-foreground">{subject.description}</p>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2 rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Questions</span>
-                          <span>{teacherQuestions[0]}</span>
-                        </div>
-                        <Slider min={10} max={80} step={5} value={teacherQuestions} onValueChange={setTeacherQuestions} />
-                      </div>
-                      <div className="space-y-2 rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Duration</span>
-                          <span>{teacherDuration[0]}m</span>
-                        </div>
-                        <Slider min={20} max={180} step={5} value={teacherDuration} onValueChange={setTeacherDuration} />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <label className="flex items-center gap-2 rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <Checkbox checked={teacherQuestionMix.mcq} onCheckedChange={(checked) => setTeacherQuestionMix((prev) => ({ ...prev, mcq: Boolean(checked) }))} />
-                        <span className="text-sm">MCQ</span>
-                      </label>
-                      <label className="flex items-center gap-2 rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <Checkbox checked={teacherQuestionMix.theory} onCheckedChange={(checked) => setTeacherQuestionMix((prev) => ({ ...prev, theory: Boolean(checked) }))} />
-                        <span className="text-sm">Theory</span>
-                      </label>
-                      <label className="flex items-center gap-2 rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <Checkbox checked={teacherQuestionMix.flashcards} onCheckedChange={(checked) => setTeacherQuestionMix((prev) => ({ ...prev, flashcards: Boolean(checked) }))} />
-                        <span className="text-sm">Flashcards</span>
-                      </label>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm">Shuffle</p>
-                          <Switch checked={teacherShuffle} onCheckedChange={setTeacherShuffle} />
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm">Allow Retry</p>
-                          <Switch checked={teacherAllowRetry} onCheckedChange={setTeacherAllowRetry} />
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm">Publish Now</p>
-                          <Switch checked={teacherPublishNow} onCheckedChange={setTeacherPublishNow} />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-borderColorPrimary bg-backgroundSecondary">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Assignment Preview</CardTitle>
-                    <CardDescription>Release summary.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Title</p>
-                      <p className="text-sm font-semibold">{teacherTitle || "Untitled Exam"}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <p className="text-xs text-muted-foreground">Questions</p>
-                        <p className="text-xl font-semibold">{teacherQuestions[0]}</p>
-                      </div>
-                      <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <p className="text-xs text-muted-foreground">Duration</p>
-                        <p className="text-xl font-semibold">{teacherDuration[0]}m</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Enabled formats: {activeTeacherFormats}</p>
-                    <Button className="w-full">
-                      <ClipboardList className="mr-2 h-4 w-4" />
-                      Generate Question Pack
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
+              <TeacherExamPrep subjects={subjects} />
             )}
           </div>
         </ScrollArea>

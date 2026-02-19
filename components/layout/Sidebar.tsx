@@ -83,6 +83,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const isExamPrepPage = pathname === "/exam-prep";
+  const isSubjectsPage = pathname === "/project";
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { history, removeHistory: removeItem, renameHistory: renameItem, getHistoryByType, isLoading, addHistory } = useHistoryStore();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -252,6 +253,10 @@ export function Sidebar() {
     useCompareModeStore.getState().setIsCompareMode(false);
     document.title = "Exam Prep - Alle-AI";
     router.push("/exam-prep");
+  };
+
+  const handleSubjects = () => {
+    router.push("/project");
   };
 
 
@@ -653,6 +658,22 @@ export function Sidebar() {
                 >
                   <GraduationCap className="mr-2 h-4 w-4" />
                   EXAM PREP
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleSubjects();
+                    (isMobile && isOpen) ? toggle() : '';
+                  }}
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start",
+                    isSubjectsPage
+                      ? "border-sky-400/50 bg-sky-500/15 text-sky-200 hover:bg-sky-500/20"
+                      : "border-borderColorPrimary bg-background text-foreground hover:bg-secondary/70"
+                  )}
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  SUBJECTS
                 </Button>
               </div>
             </div>
@@ -1399,6 +1420,18 @@ export function Sidebar() {
                   )}
                 >
                   <GraduationCap className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSubjects}
+                  className={cn(
+                    "flex-1",
+                    isSubjectsPage
+                      ? "border-sky-400/50 bg-sky-500/15 text-sky-200 hover:bg-sky-500/20"
+                      : "border-borderColorPrimary bg-background text-foreground hover:bg-secondary/70"
+                  )}
+                >
+                  <BookOpen className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
