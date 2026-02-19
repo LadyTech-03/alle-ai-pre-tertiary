@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, forwardRef, useRef, useCallback, useMemo } from "react";
-import { usePathname, useRouter, useParams, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,9 +81,8 @@ const AUDIO_CATEGORY_COLORS = {
 export function Sidebar() {
   const { isOpen, setCurrentPage, toggle, setCurrentConversationLink, setSectionId } = useSidebarStore();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const isExamPrepPage = pathname === "/project" && searchParams.get("mode") === "exam-prep";
+  const isExamPrepPage = pathname === "/exam-prep";
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { history, removeHistory: removeItem, renameHistory: renameItem, getHistoryByType, isLoading, addHistory } = useHistoryStore();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -252,7 +251,7 @@ export function Sidebar() {
     useCombinedModeStore.getState().setIsCombinedMode(false);
     useCompareModeStore.getState().setIsCompareMode(false);
     document.title = "Exam Prep - Alle-AI";
-    router.push("/project?mode=exam-prep");
+    router.push("/exam-prep");
   };
 
 
@@ -604,7 +603,7 @@ export function Sidebar() {
             {/* Top section with fixed content */}
             <div className="py-2 px-0 flex-shrink-0">
               <div className="flex flex-col gap-2 px-2">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex gap-2">
                   <Button
                     onClick={() => {
                       handleNewChat();
@@ -616,24 +615,6 @@ export function Sidebar() {
                     <HiOutlinePencilAlt className={`mr-2 h-4 w-4 ${getSectionStyles(currentType).iconColor} ${getSectionStyles(currentType).iconColor}`} />
                     OPEN CHAT
                   </Button>
-                  <Button
-                    onClick={() => {
-                      handleExamPrep();
-                      (isMobile && isOpen) ? toggle() : '';
-                    }}
-                    variant="outline"
-                    className={cn(
-                      "flex-1",
-                      isExamPrepPage
-                        ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20"
-                        : "border-borderColorPrimary bg-background text-foreground hover:bg-secondary/70"
-                    )}
-                  >
-                    <GraduationCap className="mr-2 h-4 w-4" />
-                    EXAM PREP
-                  </Button>
-                </div>
-                <div className="flex justify-end">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -657,6 +638,22 @@ export function Sidebar() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
+                <Button
+                  onClick={() => {
+                    handleExamPrep();
+                    (isMobile && isOpen) ? toggle() : '';
+                  }}
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start",
+                    isExamPrepPage
+                      ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20"
+                      : "border-borderColorPrimary bg-background text-foreground hover:bg-secondary/70"
+                  )}
+                >
+                  <GraduationCap className="mr-2 h-4 w-4" />
+                  EXAM PREP
+                </Button>
               </div>
             </div>
 

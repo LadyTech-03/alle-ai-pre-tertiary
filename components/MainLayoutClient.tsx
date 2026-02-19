@@ -131,33 +131,33 @@ export function MainLayoutClient({
         const hasSeenNotification = reminderCookie !== undefined;
         
         // Show notification after 2 seconds if user hasn't seen it
-        if (!hasSeenNotification && !isShareRoute) {
-          setTimeout(() => {
-            toast.info("You can toggle the snowfall animation in settings ❄️", {
-              duration: 10000,
-              action: {
-                label: "Open Settings",
-                onClick: () => setSettingsModalOpen(true),
-              },
-              description: (
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    toast.dismiss();
-                    try {
-                      await fetch('/api/snowfall/reminder', { method: 'POST' });
-                    } catch (error) {
-                      console.error('Failed to set reminder:', error);
-                    }
-                  }}
-                  className="text-xs underline hover:no-underline text-foreground"
-                >
-                  Remind me later
-                </button>
-              ),
-            });
-          }, 2000);
-        }
+        // if (!hasSeenNotification && !isShareRoute) {
+        //   setTimeout(() => {
+        //     toast.info("You can toggle the snowfall animation in settings ❄️", {
+        //       duration: 10000,
+        //       action: {
+        //         label: "Open Settings",
+        //         onClick: () => setSettingsModalOpen(true),
+        //       },
+        //       description: (
+        //         <button
+        //           onClick={async (e) => {
+        //             e.stopPropagation();
+        //             toast.dismiss();
+        //             try {
+        //               await fetch('/api/snowfall/reminder', { method: 'POST' });
+        //             } catch (error) {
+        //               console.error('Failed to set reminder:', error);
+        //             }
+        //           }}
+        //           className="text-xs underline hover:no-underline text-foreground"
+        //         >
+        //           Remind me later
+        //         </button>
+        //       ),
+        //     });
+        //   }, 2000);
+        // }
       } catch (error) {
         console.error('Failed to fetch snowfall preferences:', error);
         setSnowfallLoading(false);
