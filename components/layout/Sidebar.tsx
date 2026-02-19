@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, forwardRef, useRef, useCallback, useMemo } from "react";
-import { usePathname, useRouter, useParams } from "next/navigation";
+import { usePathname, useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ import {
   ContextMenuSeparator
 } from "@/components/ui/context-menu";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { LayoutGrid, Plus, EllipsisVertical, Gem, ChevronDown, BookOpen, Pencil, Trash2, History, Search, ChartLine, ImageIcon, Music, Video, Loader, Share, Undo2, ChevronRight, Check, X, Settings, BadgeQuestionMark, BadgeInfo, Book, LogOut, Keyboard } from "lucide-react";
+import { LayoutGrid, Plus, EllipsisVertical, Gem, ChevronDown, BookOpen, Pencil, Trash2, History, Search, ChartLine, ImageIcon, Music, Video, Loader, Share, Undo2, ChevronRight, Check, X, Settings, BadgeQuestionMark, BadgeInfo, Book, LogOut, Keyboard, GraduationCap } from "lucide-react";
 import { BsFolder2Open } from "react-icons/bs";
 import { ShortcutsModal } from "../ui/modals";
 import Image from "next/image";
@@ -81,7 +81,9 @@ const AUDIO_CATEGORY_COLORS = {
 export function Sidebar() {
   const { isOpen, setCurrentPage, toggle, setCurrentConversationLink, setSectionId } = useSidebarStore();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const isExamPrepPage = pathname === "/project" && searchParams.get("mode") === "exam-prep";
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { history, removeHistory: removeItem, renameHistory: renameItem, getHistoryByType, isLoading, addHistory } = useHistoryStore();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -241,6 +243,16 @@ export function Sidebar() {
     // Reset document title to default
     document.title = `${defaultTitle} - Alle-AI`;
     router.push("/chat");
+  };
+
+  const handleExamPrep = () => {
+    setCurrentConversationLink(null);
+    clearConversation();
+    useWebSearchStore.getState().setIsWebSearch(false);
+    useCombinedModeStore.getState().setIsCombinedMode(false);
+    useCompareModeStore.getState().setIsCompareMode(false);
+    document.title = "Exam Prep - Alle-AI";
+    router.push("/project?mode=exam-prep");
   };
 
 
@@ -591,40 +603,60 @@ export function Sidebar() {
           <>
             {/* Top section with fixed content */}
             <div className="py-2 px-0 flex-shrink-0">
-              <div className="flex gap-2 px-2">
-                <Button
-                  onClick={() => {
-                    handleNewChat();
-                    (isMobile && isOpen) ? toggle() : '';
-                  }}
-                  variant="outline"
-                  className={`flex-1 ${getSectionStyles(currentType).bgColor} ${getSectionStyles(currentType).iconColor} dark:${getSectionStyles(currentType).darkBgColor} ${getSectionStyles(currentType).hoverBg}`}
-                >
-                  <HiOutlinePencilAlt className={`mr-2 h-4 w-4 ${getSectionStyles(currentType).iconColor} ${getSectionStyles(currentType).iconColor}`} />
-                  OPEN CHAT
-                </Button>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className={`${getSectionStyles(currentType).bgColor} ${getSectionStyles(currentType).iconColor} dark:${getSectionStyles(currentType).darkBgColor} ${getSectionStyles(currentType).hoverBg}`}
-                        onClick={() => {
-                          (isMobile && isOpen) ? toggle() : '';
-                          setModelSelectionModalOpen(true)
-                        }}
-                        aria-label="Model Selection"
-                        id="tooltip-select-selector"
-                      >
-                        <LayoutGrid className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Select models</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              <div className="flex flex-col gap-2 px-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    onClick={() => {
+                      handleNewChat();
+                      (isMobile && isOpen) ? toggle() : '';
+                    }}
+                    variant="outline"
+                    className={`flex-1 ${getSectionStyles(currentType).bgColor} ${getSectionStyles(currentType).iconColor} dark:${getSectionStyles(currentType).darkBgColor} ${getSectionStyles(currentType).hoverBg}`}
+                  >
+                    <HiOutlinePencilAlt className={`mr-2 h-4 w-4 ${getSectionStyles(currentType).iconColor} ${getSectionStyles(currentType).iconColor}`} />
+                    OPEN CHAT
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      handleExamPrep();
+                      (isMobile && isOpen) ? toggle() : '';
+                    }}
+                    variant="outline"
+                    className={cn(
+                      "flex-1",
+                      isExamPrepPage
+                        ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20"
+                        : "border-borderColorPrimary bg-background text-foreground hover:bg-secondary/70"
+                    )}
+                  >
+                    <GraduationCap className="mr-2 h-4 w-4" />
+                    EXAM PREP
+                  </Button>
+                </div>
+                <div className="flex justify-end">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className={`${getSectionStyles(currentType).bgColor} ${getSectionStyles(currentType).iconColor} dark:${getSectionStyles(currentType).darkBgColor} ${getSectionStyles(currentType).hoverBg}`}
+                          onClick={() => {
+                            (isMobile && isOpen) ? toggle() : '';
+                            setModelSelectionModalOpen(true)
+                          }}
+                          aria-label="Model Selection"
+                          id="tooltip-select-selector"
+                        >
+                          <LayoutGrid className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Select models</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             </div>
 
@@ -1358,6 +1390,18 @@ export function Sidebar() {
                   className={`flex-1 ${getSectionStyles(currentType).bgColor} ${getSectionStyles(currentType).hoverBg} dark:${getSectionStyles(currentType).darkBgColor}`}
                 >
                   <CurrentIcon className={`h-4 w-4 ${getSectionStyles(currentType).iconColor}`} />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleExamPrep}
+                  className={cn(
+                    "flex-1",
+                    isExamPrepPage
+                      ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20"
+                      : "border-borderColorPrimary bg-background text-foreground hover:bg-secondary/70"
+                  )}
+                >
+                  <GraduationCap className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"

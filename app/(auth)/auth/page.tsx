@@ -26,7 +26,7 @@ const headingTexts = [
 
 // Create an inner component for the auth page logic
 function AuthPageInner() {
-  const [authMode, setAuthMode] = useState<AuthMode>('login');
+  const [authMode, setAuthMode] = useState<AuthMode>('create-session');
   const [mounted, setMounted] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [displayText, setDisplayText] = useState("");
