@@ -12,6 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Form,
   FormControl,
   FormField,
@@ -19,7 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Trophy, BrainCircuit, FileQuestion, Sparkles } from "lucide-react";
+import { Trophy, BrainCircuit, FileQuestion, Sparkles, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { StudentDifficulty, StudentExamMode, SubjectOption } from "./types";
@@ -30,33 +36,47 @@ const focusValues = ["mixed", "weak", "recent"] as const;
 const questionCountValues = ["5", "10", "15", "20", "25", "30", "40", "50", "60"] as const;
 const durationValues = ["10", "15", "20", "30", "45", "60", "90", "120"] as const;
 
-const studentPrepSchema = z.object({
-  examMode: z.string().refine((value) => studentModeValues.includes(value as StudentExamMode), {
-    message: "Select an exam type",
-  }),
-  difficulty: z
-    .string()
-    .refine((value) => difficultyValues.includes(value as StudentDifficulty), {
-      message: "Select difficulty",
+const studentPrepSchema = z
+  .object({
+    examMode: z.string().refine((value) => studentModeValues.includes(value as StudentExamMode), {
+      message: "Select an exam type",
     }),
-  focus: z.string().refine((value) => focusValues.includes(value as (typeof focusValues)[number]), {
-    message: "Select focus area",
-  }),
-  questionCount: z
-    .string()
-    .refine((value) => questionCountValues.includes(value as (typeof questionCountValues)[number]), {
-      message: "Select number of questions",
+    difficulty: z
+      .string()
+      .refine((value) => difficultyValues.includes(value as StudentDifficulty), {
+        message: "Select difficulty",
+      }),
+    focus: z.string().refine((value) => focusValues.includes(value as (typeof focusValues)[number]), {
+      message: "Select focus area",
     }),
-  durationMinutes: z
-    .string()
-    .refine((value) => durationValues.includes(value as (typeof durationValues)[number]), {
-      message: "Select duration",
-    }),
-  subjects: z.array(z.string()).min(1, "Select at least one subject"),
-  timedMode: z.boolean(),
-  hintsEnabled: z.boolean(),
-  explanationsEnabled: z.boolean(),
-});
+    questionCount: z
+      .string()
+      .refine((value) => questionCountValues.includes(value as (typeof questionCountValues)[number]), {
+        message: "Select number of questions",
+      }),
+    durationMinutes: z
+      .string()
+      .refine(
+        (value) =>
+          value === "none" || durationValues.includes(value as (typeof durationValues)[number]),
+        {
+          message: "Select duration",
+        }
+      ),
+    subjects: z.array(z.string()).min(1, "Select at least one subject"),
+    timedMode: z.boolean(),
+    hintsEnabled: z.boolean(),
+    explanationsEnabled: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.timedMode && data.durationMinutes === "none") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["durationMinutes"],
+        message: "Select a duration or disable timed mode",
+      });
+    }
+  });
 
 type StudentPrepFormValues = z.infer<typeof studentPrepSchema>;
 
@@ -93,7 +113,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
       difficulty: "",
       focus: "",
       questionCount: "",
-      durationMinutes: "",
+      durationMinutes: "none",
       subjects: [],
       timedMode: false,
       hintsEnabled: false,
@@ -113,19 +133,23 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
     values.difficulty,
     values.focus,
     values.questionCount,
-    values.durationMinutes,
     values.subjects.length > 0 ? "subjects" : "",
-  ].filter(Boolean).length;
+  ].filter(Boolean).length + (values.timedMode ? (values.durationMinutes !== "none" ? 1 : 0) : 0);
+
+  const requiredFieldCount = values.timedMode ? 6 : 5;
 
   const onSubmit = (payload: StudentPrepFormValues) => {
     const finalPayload = {
       ...payload,
       questionCount: Number(payload.questionCount),
-      durationMinutes: Number(payload.durationMinutes),
+      durationMinutes: payload.durationMinutes === "none" ? null : Number(payload.durationMinutes),
     };
 
     toast.success("Session validated", {
-      description: `${finalPayload.questionCount} questions in ${finalPayload.durationMinutes} minutes.`,
+      description:
+        finalPayload.durationMinutes === null
+          ? `${finalPayload.questionCount} questions in untimed mode.`
+          : `${finalPayload.questionCount} questions in ${finalPayload.durationMinutes} minutes.`,
     });
   };
 
@@ -147,28 +171,53 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 <FormItem>
                   <FormLabel>Exam Type</FormLabel>
                   <div className="grid gap-3 md:grid-cols-3">
-                    {modeDetails.map((mode) => {
-                      const Icon = mode.icon;
-                      const active = field.value === mode.id;
+                    <TooltipProvider>
+                      {modeDetails.map((mode) => {
+                        const Icon = mode.icon;
+                        const active = field.value === mode.id;
 
-                      return (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          onClick={() => field.onChange(mode.id)}
-                          className={cn(
-                            "rounded-lg border p-4 text-left",
-                            active
-                              ? "border-primary bg-secondary"
-                              : "border-borderColorPrimary bg-background hover:bg-secondary/60"
-                          )}
-                        >
-                          <Icon className="h-4 w-4 mb-2" />
-                          <p className="text-sm font-semibold">{mode.label}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{mode.note}</p>
-                        </button>
-                      );
-                    })}
+                        return (
+                          <div
+                            key={mode.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => field.onChange(mode.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                field.onChange(mode.id);
+                              }
+                            }}
+                            className={cn(
+                              "rounded-lg border p-4 text-left",
+                              active
+                                ? "border-primary bg-secondary"
+                                : "border-borderColorPrimary bg-background hover:bg-secondary/60"
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <Icon className="h-4 w-4" />
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:text-foreground"
+                                    aria-label={`Info: ${mode.label}`}
+                                  >
+                                    <Info className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[220px] text-xs">
+                                  {mode.note}
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <p className="text-sm font-semibold mt-2">{mode.label}</p>
+                          </div>
+                        );
+                      })}
+                    </TooltipProvider>
                   </div>
                   <FormMessage />
                 </FormItem>
@@ -294,13 +343,23 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 render={({ field }) => (
                   <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
                     <FormLabel className="text-xs text-muted-foreground">Duration (minutes)</FormLabel>
-                    <Select value={field.value || undefined} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value || undefined}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue("timedMode", value !== "none", {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select duration" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="none">No time limit (Untimed)</SelectItem>
                         {durationValues.map((option) => (
                           <SelectItem key={option} value={option}>
                             {option}
@@ -322,7 +381,25 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                   <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
                     <div className="flex items-center justify-between gap-2">
                       <Label className="text-sm">Timed Mode</Label>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked);
+                          if (!checked) {
+                            form.setValue("durationMinutes", "none", {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                            return;
+                          }
+                          if (form.getValues("durationMinutes") === "none") {
+                            form.setValue("durationMinutes", "30", {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                          }
+                        }}
+                      />
                     </div>
                   </FormItem>
                 )}
@@ -359,7 +436,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
           <CardHeader>
             <CardTitle className="text-lg">Session Preview</CardTitle>
             <CardDescription>
-              Live summary of student selections ({completedRequiredFields}/6 required fields complete).
+              Live summary of student selections ({completedRequiredFields}/{requiredFieldCount} required fields complete).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -391,7 +468,9 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 <p className="text-sm font-semibold">
                   {values.timedMode
                     ? values.durationMinutes
-                      ? `${values.durationMinutes} min`
+                      ? values.durationMinutes !== "none"
+                        ? `${values.durationMinutes} min`
+                        : "Not selected"
                       : "Not selected"
                     : "Untimed"}
                 </p>
