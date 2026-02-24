@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Clock3,
   Loader2,
+  Lightbulb,
 } from "lucide-react";
 
 interface StudentExamSessionProps {
@@ -60,6 +61,11 @@ const formatTime = (seconds: number) => {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 };
 
+const flattenQuestions = (pages: Record<number, GeneratedExamQuestion[]>) =>
+  Object.values(pages)
+    .flat()
+    .sort((a, b) => a.order - b.order);
+
 export function StudentExamSession({ request, initialBatch, onExit }: StudentExamSessionProps) {
   const [questionPages, setQuestionPages] = useState<Record<number, GeneratedExamQuestion[]>>({
     [initialBatch.page]: initialBatch.data,
@@ -73,9 +79,12 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   });
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
   const [isWaitingForBatch, setIsWaitingForBatch] = useState(false);
+  const [isSubmittingExam, setIsSubmittingExam] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(request.time_limit);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
+  const [reviewQuestions, setReviewQuestions] = useState<GeneratedExamQuestion[]>([]);
 
   const currentPage = Math.ceil(currentQuestionNumber / batchState.pageSize);
   const currentIndexInPage = (currentQuestionNumber - 1) % batchState.pageSize;
@@ -113,6 +122,13 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     setAnswers((prev) => ({
       ...prev,
       [questionId]: value,
+    }));
+  }, []);
+
+  const toggleHint = useCallback((questionId: string) => {
+    setRevealedHints((prev) => ({
+      ...prev,
+      [questionId]: !prev[questionId],
     }));
   }, []);
 
@@ -162,53 +178,95 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     [batchState.pageSize, questionPages, request.id]
   );
 
+  const ensureAllQuestionsLoaded = useCallback(async () => {
+    const pagesToLoad: number[] = [];
+    for (let page = 1; page <= batchState.totalPages; page += 1) {
+      const loadedPage = questionPages[page];
+      if (!loadedPage || loadedPage.length === 0) {
+        pagesToLoad.push(page);
+      }
+    }
+
+    if (pagesToLoad.length === 0) {
+      return flattenQuestions(questionPages);
+    }
+
+    const loadedResults = await Promise.all(
+      pagesToLoad.map((page) => loadPage(page, true))
+    );
+
+    const merged: Record<number, GeneratedExamQuestion[]> = {
+      ...questionPages,
+    };
+
+    pagesToLoad.forEach((page, index) => {
+      const pageData = loadedResults[index];
+      if (pageData && pageData.length > 0) {
+        merged[page] = pageData;
+      }
+    });
+
+    return flattenQuestions(merged);
+  }, [batchState.totalPages, loadPage, questionPages]);
+
   const submitExam = useCallback(
-    (reason: "manual" | "timeout") => {
-      if (summary) {
+    async (reason: "manual" | "timeout") => {
+      if (summary || isSubmittingExam) {
         return;
       }
 
-      const allLoadedQuestions = Object.values(questionPages).flat();
-      const questionMap = new Map(allLoadedQuestions.map((question) => [question.id, question]));
-      const answeredEntries = Object.entries(answers).filter(
-        ([, value]) => value.trim().length > 0
-      );
-      const gradableEntries = answeredEntries.filter(([questionId]) => {
-        const question = questionMap.get(questionId);
-        return question?.kind === "mcq";
-      });
-      const correctCount = gradableEntries.filter(([questionId, answer]) => {
-        const question = questionMap.get(questionId);
-        return question?.correctOptionId === answer;
-      }).length;
-      const scorePercent =
-        gradableEntries.length > 0 ? Math.round((correctCount / gradableEntries.length) * 100) : null;
+      setIsSubmittingExam(true);
 
-      setSummary({
-        answeredCount: answeredEntries.length,
-        totalQuestions: batchState.totalQuestions,
-        gradableCount: gradableEntries.length,
-        correctCount,
-        scorePercent,
-      });
+      try {
+        const allQuestions = await ensureAllQuestionsLoaded();
+        const questionMap = new Map(allQuestions.map((question) => [question.id, question]));
+        const answeredEntries = Object.entries(answers).filter(
+          ([, value]) => value.trim().length > 0
+        );
+        const gradableEntries = answeredEntries.filter(([questionId]) => {
+          const question = questionMap.get(questionId);
+          return question?.kind === "mcq";
+        });
+        const correctCount = gradableEntries.filter(([questionId, answer]) => {
+          const question = questionMap.get(questionId);
+          return question?.correctOptionId === answer;
+        }).length;
+        const scorePercent =
+          gradableEntries.length > 0
+            ? Math.round((correctCount / gradableEntries.length) * 100)
+            : null;
 
-      if (reason === "timeout") {
-        toast.error("Time is up. Test submitted automatically.");
-        return;
+        setReviewQuestions(allQuestions);
+        setSummary({
+          answeredCount: answeredEntries.length,
+          totalQuestions: batchState.totalQuestions,
+          gradableCount: gradableEntries.length,
+          correctCount,
+          scorePercent,
+        });
+
+        if (reason === "timeout") {
+          toast.error("Time is up. Test submitted automatically.");
+          return;
+        }
+
+        toast.success("Test submitted.");
+      } catch {
+        toast.error("Could not submit exam. Please try again.");
+      } finally {
+        setIsSubmittingExam(false);
       }
-
-      toast.success("Test submitted.");
     },
-    [answers, batchState.totalQuestions, questionPages, summary]
+    [answers, batchState.totalQuestions, ensureAllQuestionsLoaded, isSubmittingExam, summary]
   );
 
   useEffect(() => {
-    if (secondsLeft === null || summary) {
+    if (secondsLeft === null || summary || isSubmittingExam) {
       return;
     }
 
     if (secondsLeft <= 0) {
-      submitExam("timeout");
+      void submitExam("timeout");
       return;
     }
 
@@ -219,22 +277,63 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     return () => {
       window.clearTimeout(timer);
     };
-  }, [secondsLeft, submitExam, summary]);
+  }, [isSubmittingExam, secondsLeft, submitExam, summary]);
+
+  useEffect(() => {
+    if (summary || isSubmittingExam) {
+      return;
+    }
+
+    let cancelled = false;
+    let inFlight = false;
+
+    const prefetchUpcomingPage = async () => {
+      if (cancelled || inFlight) {
+        return;
+      }
+
+      const nextMissingPage = Array.from(
+        { length: batchState.totalPages },
+        (_, index) => index + 1
+      ).find((page) => !questionPages[page]?.length);
+
+      if (!nextMissingPage) {
+        return;
+      }
+
+      inFlight = true;
+      try {
+        await loadPage(nextMissingPage, false);
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void prefetchUpcomingPage();
+    const intervalId = window.setInterval(() => {
+      void prefetchUpcomingPage();
+    }, BATCH_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [batchState.totalPages, isSubmittingExam, loadPage, questionPages, summary]);
 
   const handlePrevious = () => {
-    if (currentQuestionNumber <= 1 || isWaitingForBatch) {
+    if (currentQuestionNumber <= 1 || isWaitingForBatch || isSubmittingExam) {
       return;
     }
     setCurrentQuestionNumber((prev) => prev - 1);
   };
 
   const handleNext = async () => {
-    if (isWaitingForBatch) {
+    if (isWaitingForBatch || isSubmittingExam) {
       return;
     }
 
     if (currentQuestionNumber >= batchState.totalQuestions) {
-      submitExam("manual");
+      await submitExam("manual");
       return;
     }
 
@@ -258,7 +357,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   };
 
   const jumpToQuestion = async (questionNumber: number) => {
-    if (isWaitingForBatch || summary) {
+    if (isWaitingForBatch || summary || isSubmittingExam) {
       return;
     }
 
@@ -282,44 +381,119 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
 
   if (summary) {
     return (
-      <Card className="border-borderColorPrimary bg-backgroundSecondary">
-        <CardHeader>
-          <Badge variant="secondary" className="w-fit px-2 py-0.5 text-[10px]">
-            TEST COMPLETE
-          </Badge>
-          <CardTitle className="mt-2 text-xl">Exam Submitted</CardTitle>
-          <CardDescription>{request.title}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">Answered</p>
-              <p className="text-lg font-semibold">
-                {summary.answeredCount}/{summary.totalQuestions}
-              </p>
+      <div className="space-y-4">
+        <Card className="border-borderColorPrimary bg-backgroundSecondary">
+          <CardHeader>
+            <Badge variant="secondary" className="w-fit px-2 py-0.5 text-[10px]">
+              TEST COMPLETE
+            </Badge>
+            <CardTitle className="mt-2 text-xl">Exam Submitted</CardTitle>
+            <CardDescription>{request.title}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                <p className="text-xs text-muted-foreground">Answered</p>
+                <p className="text-lg font-semibold">
+                  {summary.answeredCount}/{summary.totalQuestions}
+                </p>
+              </div>
+              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                <p className="text-xs text-muted-foreground">MCQ Graded</p>
+                <p className="text-lg font-semibold">{summary.gradableCount}</p>
+              </div>
+              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                <p className="text-xs text-muted-foreground">Correct</p>
+                <p className="text-lg font-semibold">{summary.correctCount}</p>
+              </div>
+              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                <p className="text-xs text-muted-foreground">Score</p>
+                <p className="text-lg font-semibold">
+                  {summary.scorePercent === null ? "N/A" : `${summary.scorePercent}%`}
+                </p>
+              </div>
             </div>
-            <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">MCQ Graded</p>
-              <p className="text-lg font-semibold">{summary.gradableCount}</p>
-            </div>
-            <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">Correct</p>
-              <p className="text-lg font-semibold">{summary.correctCount}</p>
-            </div>
-            <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">Score</p>
-              <p className="text-lg font-semibold">
-                {summary.scorePercent === null ? "N/A" : `${summary.scorePercent}%`}
-              </p>
-            </div>
-          </div>
 
-          <Button onClick={onExit} className="w-full">
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            Back to Setup
-          </Button>
-        </CardContent>
-      </Card>
+            <Button onClick={onExit} className="w-full">
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Back to Setup
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-borderColorPrimary bg-backgroundSecondary">
+          <CardHeader>
+            <CardTitle className="text-lg">Answer Review</CardTitle>
+            <CardDescription>
+              Read-only review of your responses
+              {request.allows_explanation ? " with explanations." : "."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {reviewQuestions.map((question) => {
+              const selectedRaw = answers[question.id];
+              const selectedOption = question.options.find((option) => option.id === selectedRaw) ?? null;
+              const isMcqCorrect = question.kind === "mcq" && selectedRaw === question.correctOptionId;
+
+              return (
+                <div
+                  key={question.id}
+                  className="rounded-lg border border-borderColorPrimary bg-background px-3 py-3"
+                >
+                  <p className="text-xs text-muted-foreground">Question {question.order}</p>
+                  <p className="mt-1 text-sm">{question.prompt}</p>
+
+                  {question.kind === "mcq" ? (
+                    <div className="mt-2 space-y-1">
+                      {question.options.map((option) => {
+                        const isSelected = selectedRaw === option.id;
+                        const isCorrectOption = option.id === question.correctOptionId;
+
+                        return (
+                          <div
+                            key={option.id}
+                            className={cn(
+                              "rounded-md border px-2 py-1.5 text-xs",
+                              isCorrectOption && "border-primary/70 bg-secondary/70",
+                              isSelected && !isCorrectOption && "border-destructive/40 bg-destructive/10"
+                            )}
+                          >
+                            <span className="font-medium">{option.id}.</span> {option.text}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mt-2 rounded-md border border-borderColorPrimary px-2 py-2 text-xs">
+                      {selectedRaw?.trim() ? selectedRaw : "No response submitted."}
+                    </div>
+                  )}
+
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {question.kind === "mcq" ? (
+                      <>
+                        Your answer: {selectedOption ? `${selectedOption.id}` : "Not answered"} | Status:{" "}
+                        {selectedRaw ? (isMcqCorrect ? "Correct" : "Incorrect") : "Not answered"}
+                      </>
+                    ) : (
+                      <>Response recorded.</>
+                    )}
+                  </div>
+
+                  {request.allows_explanation ? (
+                    <div className="mt-2 rounded-md border border-borderColorPrimary bg-secondary/40 px-2 py-2">
+                      <p className="text-xs font-medium">Explanation</p>
+                      <p className="text-xs text-muted-foreground">
+                        {question.explanation ?? "Explanation not available for this item."}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -344,12 +518,15 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                   {formatTime(secondsLeft)}
                 </Badge>
               )}
-              <Badge variant={batchState.isGenerating ? "outline" : "secondary"} className="px-2 py-1 text-[11px]">
+              <Badge
+                variant={batchState.isGenerating ? "outline" : "secondary"}
+                className="px-2 py-1 text-[11px]"
+              >
                 {batchState.isGenerating
-                  ? `Generating batches ${batchState.readyThroughPage}/${batchState.totalPages}`
+                  ? `Generating in background ${batchState.readyThroughPage}/${batchState.totalPages}`
                   : "All batches ready"}
               </Badge>
-              <Button variant="outline" size="sm" onClick={onExit}>
+              <Button variant="outline" size="sm" onClick={onExit} disabled={isSubmittingExam}>
                 Exit Session
               </Button>
             </div>
@@ -370,7 +547,14 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isWaitingForBatch || !currentQuestion ? (
+            {isSubmittingExam ? (
+              <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-borderColorPrimary bg-background">
+                <div className="text-center text-sm text-muted-foreground">
+                  <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                  Submitting exam and preparing review...
+                </div>
+              </div>
+            ) : isWaitingForBatch || !currentQuestion ? (
               <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-borderColorPrimary bg-background">
                 <div className="text-center text-sm text-muted-foreground">
                   <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
@@ -415,21 +599,38 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                   />
                 )}
 
-                {currentQuestion.hint && (
-                  <Alert className="border-borderColorPrimary bg-background">
-                    <AlertTitle>Hint</AlertTitle>
-                    <AlertDescription>{currentQuestion.hint}</AlertDescription>
-                  </Alert>
-                )}
+                {request.hints_count && request.hints_count > 0 && currentQuestion.hint ? (
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleHint(currentQuestion.id)}
+                    >
+                      <Lightbulb className="mr-2 h-4 w-4" />
+                      {revealedHints[currentQuestion.id] ? "Hide Hint" : "Hint"}
+                    </Button>
+                    {revealedHints[currentQuestion.id] ? (
+                      <Alert className="border-borderColorPrimary bg-background">
+                        <AlertTitle>Hint</AlertTitle>
+                        <AlertDescription>{currentQuestion.hint}</AlertDescription>
+                      </Alert>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             )}
 
             <div className="mt-6 flex items-center justify-between">
-              <Button variant="outline" onClick={handlePrevious} disabled={currentQuestionNumber === 1 || isWaitingForBatch}>
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentQuestionNumber === 1 || isWaitingForBatch || isSubmittingExam}
+              >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Previous
               </Button>
-              <Button onClick={handleNext} disabled={isWaitingForBatch}>
+              <Button onClick={handleNext} disabled={isWaitingForBatch || isSubmittingExam}>
                 {currentQuestionNumber >= batchState.totalQuestions ? "Submit Test" : "Next Question"}
                 {currentQuestionNumber >= batchState.totalQuestions ? (
                   <CheckCircle2 className="ml-2 h-4 w-4" />
@@ -461,7 +662,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                     key={questionNumber}
                     type="button"
                     onClick={() => jumpToQuestion(questionNumber)}
-                    disabled={!loaded || isWaitingForBatch}
+                    disabled={!loaded || isWaitingForBatch || isSubmittingExam}
                     className={cn(
                       "h-8 rounded-md border text-xs font-medium",
                       active && "border-primary bg-secondary",
@@ -478,7 +679,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
             {batchState.isGenerating ? (
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
                 <ArrowRight className="mr-1 inline h-3.5 w-3.5" />
-                More batches are generating. Click next to continue as they become available.
+                Remaining batches are generating in the background and are prefetched automatically.
               </div>
             ) : (
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">

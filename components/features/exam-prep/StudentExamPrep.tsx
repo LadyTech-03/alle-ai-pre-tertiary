@@ -10,6 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Tooltip,
@@ -25,7 +33,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Trophy, BrainCircuit, FileQuestion, Sparkles, Info, Loader2 } from "lucide-react";
+import {
+  Trophy,
+  BrainCircuit,
+  FileQuestion,
+  Sparkles,
+  Info,
+  Loader2,
+  Clock3,
+  AlertTriangle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useOrgSessionStore } from "@/stores";
@@ -131,10 +148,20 @@ const focusLabels: Record<(typeof focusValues)[number], string> = {
   recent: "Recent Topics",
 };
 
+const formatSessionDuration = (seconds: number | null) => {
+  if (seconds === null) {
+    return "Untimed";
+  }
+  const totalMinutes = Math.max(1, Math.floor(seconds / 60));
+  return `${totalMinutes} minutes`;
+};
+
 export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   const { orgId } = useOrgSessionStore();
   const activeOrgId = orgId ?? "1";
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pendingSession, setPendingSession] = useState<CreateMockQuestionSessionResponse | null>(null);
+  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [activeSession, setActiveSession] = useState<CreateMockQuestionSessionResponse | null>(null);
 
   const form = useForm<StudentPrepFormValues>({
@@ -202,14 +229,31 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
         batchSize: 5,
       });
 
-      setActiveSession(session);
-      toast.success("Practice started", {
-        description: `${session.firstBatch.data.length} questions are ready now. More batches load as you continue.`,
+      setPendingSession(session);
+      setIsInstructionsOpen(true);
+      toast.success("Questions are ready", {
+        description: `${session.firstBatch.data.length} questions are available now. Review instructions to begin.`,
       });
     } catch {
       toast.error("Failed to start practice. Try again.");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleBeginExam = () => {
+    if (!pendingSession) {
+      return;
+    }
+    setActiveSession(pendingSession);
+    setPendingSession(null);
+    setIsInstructionsOpen(false);
+  };
+
+  const handleInstructionModalChange = (open: boolean) => {
+    setIsInstructionsOpen(open);
+    if (!open) {
+      setPendingSession(null);
     }
   };
 
@@ -224,9 +268,10 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
-        <Card className="border-borderColorPrimary bg-backgroundSecondary">
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
+          <Card className="border-borderColorPrimary bg-backgroundSecondary">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">Student Practice Setup</CardTitle>
             <CardDescription>
@@ -502,7 +547,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-borderColorPrimary bg-backgroundSecondary">
+          <Card className="border-borderColorPrimary bg-backgroundSecondary">
           <CardHeader>
             <CardTitle className="text-lg">Session Preview</CardTitle>
             <CardDescription>
@@ -595,8 +640,77 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
               )}
             </Button>
           </CardContent>
-        </Card>
-      </form>
-    </Form>
+          </Card>
+        </form>
+      </Form>
+
+      <Dialog open={isInstructionsOpen} onOpenChange={handleInstructionModalChange}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Exam Instructions</DialogTitle>
+            <DialogDescription>
+              Review these instructions before you begin the test.
+            </DialogDescription>
+          </DialogHeader>
+
+          {pendingSession ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Questions</p>
+                  <p className="text-sm font-semibold">{pendingSession.request.number}</p>
+                </div>
+                <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="text-sm font-semibold">
+                    {formatSessionDuration(pendingSession.request.time_limit)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs">
+                <p className="font-medium">Before you begin</p>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-muted-foreground">
+                  <li>The first 5 questions are ready immediately.</li>
+                  <li>Remaining batches continue generating in the background.</li>
+                  <li>You can move between loaded questions using the progress grid.</li>
+                  <li>
+                    {pendingSession.request.time_limit ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        Timed test auto-submits when the timer reaches 00:00.
+                      </span>
+                    ) : (
+                      "Untimed mode has no auto-submission timer."
+                    )}
+                  </li>
+                  <li>
+                    <span className="inline-flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Do not refresh or close this page during the exam.
+                    </span>
+                  </li>
+                  <li>
+                    After submission, you will see a read-only review
+                    {pendingSession.request.allows_explanation
+                      ? " with explanations."
+                      : "."}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleInstructionModalChange(false)}>
+              Back to Setup
+            </Button>
+            <Button type="button" onClick={handleBeginExam} disabled={!pendingSession}>
+              Begin Test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

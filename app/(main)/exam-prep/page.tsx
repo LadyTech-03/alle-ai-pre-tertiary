@@ -88,7 +88,7 @@ export default function ExamPrepPage() {
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="mx-auto w-full max-w-6xl px-4 py-8 pb-20">
-            <Card className="mb-5 border-borderColorPrimary bg-backgroundSecondary">
+            {/* <Card className="mb-5 border-borderColorPrimary bg-backgroundSecondary">
               <CardContent className="p-6">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
@@ -127,7 +127,7 @@ export default function ExamPrepPage() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {role === "student" ? (
               <StudentExamPrep subjects={subjects} />

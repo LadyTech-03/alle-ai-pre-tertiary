@@ -94,6 +94,7 @@ export interface GeneratedExamQuestion {
   subjectId: string;
   subjectName: string;
   hint: string | null;
+  explanation: string | null;
 }
 
 export interface QuestionBatchResponse {
@@ -190,7 +191,7 @@ const mockExamSessions = new Map<number, MockSessionState>();
 
 const MOCK_DELAY_MS = 650;
 const MOCK_BATCH_DELAY_MS = 450;
-const MOCK_BATCH_INTERVAL_MS = 2500;
+const MOCK_BATCH_INTERVAL_MS = 1500;
 const DEFAULT_BATCH_SIZE = 5;
 
 const sleep = (ms: number) =>
@@ -289,6 +290,13 @@ const buildGeneratedQuestions = (payload: CreateMockQuestionSessionPayload): Gen
           ? "theory"
           : "flashcard";
     const optionIds = ["A", "B", "C", "D"] as const;
+    const correctOptionId = kind === "mcq" ? optionIds[index % optionIds.length] : null;
+    const explanation =
+      kind === "mcq"
+        ? `Option ${correctOptionId} is correct because it best matches the core ${subject.name} principle tested in this item.`
+        : kind === "theory"
+          ? `A complete answer should define the concept, explain why it matters, and apply it to a concrete ${subject.name} scenario.`
+          : `A strong flash-card response should include the definition and one practical real-world example.`;
 
     return {
       id: `${subject.id}-q-${order}`,
@@ -302,13 +310,14 @@ const buildGeneratedQuestions = (payload: CreateMockQuestionSessionPayload): Gen
               text: `${subject.name} option ${optionIndex + 1} for question ${order}`,
             }))
           : [],
-      correctOptionId: kind === "mcq" ? optionIds[index % optionIds.length] : null,
+      correctOptionId,
       subjectId: subject.id,
       subjectName: subject.name,
       hint:
         payload.hintsCount > 0
           ? `Hint: recall the core ${subject.name} principle before answering.`
           : null,
+      explanation: payload.allowsExplanation ? explanation : null,
     };
   });
 };
