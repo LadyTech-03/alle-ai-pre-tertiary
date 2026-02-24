@@ -2,6 +2,7 @@ import api from "./axios";
 
 export type EndUserType = "Faculty" | "Student";
 export type QuestionRequestType = "flashcards" | "theory" | "mcqs";
+export type GeneratedQuestionKind = "mcq" | "theory" | "flashcard";
 
 export interface EduQuestionRequest {
   id: number;
@@ -78,6 +79,71 @@ export interface SimulateGenerateQuestionRequestPayload {
   isPublic?: boolean;
 }
 
+export interface GeneratedQuestionOption {
+  id: string;
+  text: string;
+}
+
+export interface GeneratedExamQuestion {
+  id: string;
+  order: number;
+  kind: GeneratedQuestionKind;
+  prompt: string;
+  options: GeneratedQuestionOption[];
+  correctOptionId: string | null;
+  subjectId: string;
+  subjectName: string;
+  hint: string | null;
+}
+
+export interface QuestionBatchResponse {
+  requestId: number;
+  page: number;
+  perPage: number;
+  totalQuestions: number;
+  totalPages: number;
+  readyThroughPage: number;
+  isReady: boolean;
+  isGenerating: boolean;
+  data: GeneratedExamQuestion[];
+}
+
+export interface GetQuestionBatchParams {
+  organisationId?: number | string;
+  requestId: number;
+  page: number;
+  perPage?: number;
+  endUserType?: EndUserType;
+  useMock?: boolean;
+}
+
+export interface CreateMockQuestionSessionPayload {
+  organisationId: number | string;
+  title: string;
+  type: QuestionRequestType;
+  difficulty: string;
+  number: number;
+  timeLimitSeconds: number | null;
+  allowsExplanation: boolean;
+  hintsCount: number;
+  focus: string;
+  subjects: Array<{ id: string; name: string }>;
+  additionalNote?: string;
+  batchSize?: number;
+}
+
+export interface CreateMockQuestionSessionResponse {
+  request: EduQuestionRequest;
+  firstBatch: QuestionBatchResponse;
+}
+
+interface MockSessionState {
+  request: EduQuestionRequest;
+  questions: GeneratedExamQuestion[];
+  pageSize: number;
+  createdAtMs: number;
+}
+
 const mockSeed: EduQuestionRequest[] = [
   {
     id: 48,
@@ -120,8 +186,12 @@ const mockSeed: EduQuestionRequest[] = [
 ];
 
 let mockQuestionRequests: EduQuestionRequest[] = [...mockSeed];
+const mockExamSessions = new Map<number, MockSessionState>();
 
 const MOCK_DELAY_MS = 650;
+const MOCK_BATCH_DELAY_MS = 450;
+const MOCK_BATCH_INTERVAL_MS = 2500;
+const DEFAULT_BATCH_SIZE = 5;
 
 const sleep = (ms: number) =>
   new Promise((resolve) => {
@@ -183,6 +253,141 @@ const buildMockResponse = (
       to,
       total,
     },
+  };
+};
+
+const generatePrompt = (
+  requestType: QuestionRequestType,
+  order: number,
+  subjectName: string,
+  difficulty: string
+) => {
+  if (requestType === "theory") {
+    return `Question ${order}: Explain the key concept in ${subjectName} at a ${difficulty} level, using a practical example.`;
+  }
+
+  if (requestType === "flashcards") {
+    return `Flash card ${order}: Define an important ${subjectName} term and mention one real use case.`;
+  }
+
+  return `Question ${order}: Which option best answers this ${difficulty} ${subjectName} objective item?`;
+};
+
+const buildGeneratedQuestions = (payload: CreateMockQuestionSessionPayload): GeneratedExamQuestion[] => {
+  const sourceSubjects =
+    payload.subjects.length > 0
+      ? payload.subjects
+      : [{ id: "general", name: "General Studies" }];
+
+  return Array.from({ length: payload.number }, (_, index) => {
+    const order = index + 1;
+    const subject = sourceSubjects[index % sourceSubjects.length];
+    const kind: GeneratedQuestionKind =
+      payload.type === "mcqs"
+        ? "mcq"
+        : payload.type === "theory"
+          ? "theory"
+          : "flashcard";
+    const optionIds = ["A", "B", "C", "D"] as const;
+
+    return {
+      id: `${subject.id}-q-${order}`,
+      order,
+      kind,
+      prompt: generatePrompt(payload.type, order, subject.name, payload.difficulty),
+      options:
+        kind === "mcq"
+          ? optionIds.map((id, optionIndex) => ({
+              id,
+              text: `${subject.name} option ${optionIndex + 1} for question ${order}`,
+            }))
+          : [],
+      correctOptionId: kind === "mcq" ? optionIds[index % optionIds.length] : null,
+      subjectId: subject.id,
+      subjectName: subject.name,
+      hint:
+        payload.hintsCount > 0
+          ? `Hint: recall the core ${subject.name} principle before answering.`
+          : null,
+    };
+  });
+};
+
+const createSessionFromRequest = (
+  request: EduQuestionRequest,
+  pageSize: number,
+  createdAtOffsetMs: number = 0
+) => {
+  const subject = {
+    id: request.course_uuid,
+    name: "Selected Subject",
+  };
+  const questions = buildGeneratedQuestions({
+    organisationId: request.organisation_id,
+    title: request.title,
+    type: request.type,
+    difficulty: request.difficulty,
+    number: request.number,
+    timeLimitSeconds: request.time_limit,
+    allowsExplanation: Boolean(request.allows_explanation),
+    hintsCount: request.hints_count ?? 0,
+    focus: "mixed",
+    subjects: [subject],
+    additionalNote: request.additional_note ?? undefined,
+    batchSize: pageSize,
+  });
+
+  return {
+    request,
+    questions,
+    pageSize,
+    createdAtMs: Date.now() - createdAtOffsetMs,
+  };
+};
+
+const ensureSessionExistsForRequest = (requestId: number, pageSize: number) => {
+  const existing = mockExamSessions.get(requestId);
+  if (existing) {
+    return existing;
+  }
+
+  const fallbackRequest = mockQuestionRequests.find((request) => request.id === requestId);
+  if (!fallbackRequest) {
+    throw new Error("Question session not found");
+  }
+
+  const seededSession = createSessionFromRequest(
+    fallbackRequest,
+    pageSize,
+    MOCK_BATCH_INTERVAL_MS * 2
+  );
+  mockExamSessions.set(requestId, seededSession);
+  return seededSession;
+};
+
+const buildQuestionBatch = (session: MockSessionState, page: number): QuestionBatchResponse => {
+  const totalQuestions = session.questions.length;
+  const perPage = session.pageSize;
+  const totalPages = Math.max(1, Math.ceil(totalQuestions / perPage));
+  const normalizedPage = Math.min(Math.max(1, page), totalPages);
+  const elapsedMs = Date.now() - session.createdAtMs;
+  const generatedPageCount = 1 + Math.floor(elapsedMs / MOCK_BATCH_INTERVAL_MS);
+  const readyThroughPage = Math.min(totalPages, generatedPageCount);
+  const availableQuestionCount = Math.min(totalQuestions, readyThroughPage * perPage);
+  const startIndex = (normalizedPage - 1) * perPage;
+  const isReady = startIndex < availableQuestionCount;
+  const endIndex = Math.min(startIndex + perPage, availableQuestionCount);
+
+  return {
+    requestId: session.request.id,
+    page: normalizedPage,
+    perPage,
+    totalQuestions,
+    totalPages,
+    readyThroughPage,
+    isReady,
+    isGenerating: availableQuestionCount < totalQuestions,
+    data: isReady ? session.questions.slice(startIndex, endIndex) : [],
   };
 };
 
@@ -255,7 +460,75 @@ export const eduQuestionRequestsApi = {
     return generated;
   },
 
+  createMockQuestionSession: async (
+    payload: CreateMockQuestionSessionPayload
+  ): Promise<CreateMockQuestionSessionResponse> => {
+    const primarySubjectId = payload.subjects[0]?.id ?? "general";
+    const pageSize = Math.max(1, payload.batchSize ?? DEFAULT_BATCH_SIZE);
+
+    const request = await eduQuestionRequestsApi.simulateGenerateQuestionRequest({
+      organisationId: payload.organisationId,
+      title: payload.title,
+      courseUuid: primarySubjectId,
+      number: payload.number,
+      type: payload.type,
+      timeLimitSeconds: payload.timeLimitSeconds,
+      allowsExplanation: payload.allowsExplanation,
+      hintsCount: payload.hintsCount,
+      difficulty: payload.difficulty,
+      additionalNote: payload.additionalNote,
+    });
+
+    const questions = buildGeneratedQuestions(payload);
+    const sessionState: MockSessionState = {
+      request,
+      questions,
+      pageSize,
+      createdAtMs: Date.now(),
+    };
+    mockExamSessions.set(request.id, sessionState);
+
+    return {
+      request,
+      firstBatch: buildQuestionBatch(sessionState, 1),
+    };
+  },
+
+  getQuestionBatch: async ({
+    organisationId,
+    requestId,
+    page,
+    perPage = DEFAULT_BATCH_SIZE,
+    endUserType = "Student",
+    useMock,
+  }: GetQuestionBatchParams): Promise<QuestionBatchResponse> => {
+    const shouldUseMock = useMock ?? useMockByDefault();
+
+    if (shouldUseMock) {
+      await sleep(MOCK_BATCH_DELAY_MS);
+      const session = ensureSessionExistsForRequest(requestId, perPage);
+      return buildQuestionBatch(session, page);
+    }
+
+    const endpoint = organisationId
+      ? `/organisations/${organisationId}/edu-question-requests/${requestId}/questions`
+      : `/edu-question-requests/${requestId}/questions`;
+
+    const response = await api.get<QuestionBatchResponse>(endpoint, {
+      headers: {
+        EndUserType: endUserType,
+      },
+      params: {
+        page,
+        per_page: perPage,
+      },
+    });
+
+    return response.data;
+  },
+
   resetMockQuestionRequests: () => {
     mockQuestionRequests = [...mockSeed];
+    mockExamSessions.clear();
   },
 };

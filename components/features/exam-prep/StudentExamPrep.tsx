@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,10 +31,11 @@ import { toast } from "sonner";
 import { useOrgSessionStore } from "@/stores";
 import {
   eduQuestionRequestsApi,
-  type EduQuestionRequest,
+  type CreateMockQuestionSessionResponse,
   type QuestionRequestType,
 } from "@/lib/api/eduQuestionRequests";
 import type { StudentDifficulty, StudentExamMode, SubjectOption } from "./types";
+import { StudentExamSession } from "./StudentExamSession";
 
 const studentModeValues = ["flashcards", "theory", "mcq"] as const;
 const difficultyValues = ["adaptive", "easy", "medium", "hard"] as const;
@@ -133,6 +134,9 @@ const focusLabels: Record<(typeof focusValues)[number], string> = {
 export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   const { orgId } = useOrgSessionStore();
   const activeOrgId = orgId ?? "1";
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [activeSession, setActiveSession] = useState<CreateMockQuestionSessionResponse | null>(null);
+
   const form = useForm<StudentPrepFormValues>({
     resolver: zodResolver(studentPrepSchema),
     mode: "onSubmit",
@@ -151,44 +155,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   });
 
   const values = form.watch();
-  const [isFetchingRequests, setIsFetchingRequests] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [latestGeneratedRequestId, setLatestGeneratedRequestId] = useState<number | null>(null);
-  const [questionRequests, setQuestionRequests] = useState<EduQuestionRequest[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchQuestionRequests = async () => {
-      setIsFetchingRequests(true);
-
-      try {
-        const response = await eduQuestionRequestsApi.getQuestionRequests({
-          organisationId: activeOrgId,
-          endUserType: "Student",
-        });
-        if (!isMounted) {
-          return;
-        }
-        setQuestionRequests(response.data);
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-        toast.error("Could not load generated question batches.");
-      } finally {
-        if (isMounted) {
-          setIsFetchingRequests(false);
-        }
-      }
-    };
-
-    fetchQuestionRequests();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeOrgId]);
 
   const selectedSubjects = useMemo(
     () => subjects.filter((subject) => values.subjects.includes(subject.id)),
@@ -213,55 +179,58 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
     };
 
     const modeLabel = modeDetails.find((mode) => mode.id === payload.examMode)?.label ?? "Practice";
-    const subjectNames = subjects
+    const selectedSubjectMeta = subjects
       .filter((subject) => payload.subjects.includes(subject.id))
-      .map((subject) => subject.name);
+      .map((subject) => ({ id: subject.id, name: subject.name }));
 
     try {
       setIsGenerating(true);
 
-      const generatedRequest = await eduQuestionRequestsApi.simulateGenerateQuestionRequest({
+      const session = await eduQuestionRequestsApi.createMockQuestionSession({
         organisationId: activeOrgId,
         title: `${modeLabel} Practice`,
-        courseUuid: payload.subjects[0],
-        number: finalPayload.questionCount,
         type: modeToRequestType[payload.examMode as StudentExamMode],
+        difficulty: payload.difficulty,
+        number: finalPayload.questionCount,
         timeLimitSeconds:
           finalPayload.durationMinutes === null ? null : finalPayload.durationMinutes * 60,
         allowsExplanation: payload.explanationsEnabled,
         hintsCount: payload.hintsEnabled ? 3 : 0,
-        difficulty: payload.difficulty,
-        additionalNote: `Focus: ${focusLabels[payload.focus as (typeof focusValues)[number]]}. Subjects: ${subjectNames.join(", ")}.`,
+        focus: payload.focus,
+        subjects: selectedSubjectMeta,
+        additionalNote: `Focus: ${focusLabels[payload.focus as (typeof focusValues)[number]]}.`,
+        batchSize: 5,
       });
 
-      const response = await eduQuestionRequestsApi.getQuestionRequests({
-        organisationId: activeOrgId,
-        endUserType: "Student",
-      });
-
-      setQuestionRequests(response.data);
-      setLatestGeneratedRequestId(generatedRequest.id);
-
-      toast.success("Practice questions generated", {
-        description:
-          finalPayload.durationMinutes === null
-            ? `${finalPayload.questionCount} questions in untimed mode.`
-            : `${finalPayload.questionCount} questions in ${finalPayload.durationMinutes} minutes.`,
+      setActiveSession(session);
+      toast.success("Practice started", {
+        description: `${session.firstBatch.data.length} questions are ready now. More batches load as you continue.`,
       });
     } catch {
-      toast.error("Failed to generate questions. Try again.");
+      toast.error("Failed to start practice. Try again.");
     } finally {
       setIsGenerating(false);
     }
   };
+
+  if (activeSession) {
+    return (
+      <StudentExamSession
+        request={activeSession.request}
+        initialBatch={activeSession.firstBatch}
+        onExit={() => setActiveSession(null)}
+      />
+    );
+  }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
         <Card className="border-borderColorPrimary bg-backgroundSecondary">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Exam Prep Setup</CardTitle>
+            <CardTitle className="text-lg">Student Practice Setup</CardTitle>
             <CardDescription>
+              Required fields start empty. Complete setup to start an exam session.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -314,7 +283,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                                 </TooltipContent>
                               </Tooltip>
                             </div>
-                            <p className="text-sm font-semibold mt-2">{mode.label}</p>
+                            <p className="mt-2 text-sm font-semibold">{mode.label}</p>
                           </div>
                         );
                       })}
@@ -353,7 +322,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                           )}
                         >
                           <p className="text-sm font-medium">{subject.name}</p>
-                          {/* <p className="text-xs text-muted-foreground">{subject.description}</p> */}
+                          <p className="text-xs text-muted-foreground">{subject.description}</p>
                         </button>
                       );
                     })}
@@ -588,7 +557,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
             </div>
 
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Selected Subjects</p>
+              <p className="mb-2 text-xs text-muted-foreground">Selected Subjects</p>
               <div className="flex flex-wrap gap-2">
                 {selectedSubjects.length > 0 ? (
                   selectedSubjects.map((subject) => (
@@ -602,49 +571,8 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">Generated Batches</p>
-                <Badge variant="outline" className="px-2 py-0.5 text-[10px]">
-                  {questionRequests.length}
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                {isFetchingRequests ? (
-                  <div className="flex items-center gap-2 rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Loading generated batches...
-                  </div>
-                ) : questionRequests.length > 0 ? (
-                  questionRequests.slice(0, 3).map((batch) => (
-                    <div
-                      key={batch.id}
-                      className={cn(
-                        "rounded-lg border border-borderColorPrimary bg-background px-3 py-2",
-                        latestGeneratedRequestId === batch.id && "border-primary bg-secondary/70"
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold">{batch.title}</p>
-                        <Badge variant="secondary" className="px-1.5 py-0 text-[10px] uppercase">
-                          {batch.type}
-                        </Badge>
-                      </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        {batch.number} questions
-                        {batch.time_limit
-                          ? ` | ${Math.floor(batch.time_limit / 60)} min`
-                          : " | Untimed"}
-                        {` | ${batch.difficulty}`}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
-                    No generated batches yet. Start a practice session to create one.
-                  </div>
-                )}
-              </div>
+            <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
+              The first 5 questions are delivered immediately. More question batches continue generating and are loaded when needed.
             </div>
 
             {form.formState.submitCount > 0 && !form.formState.isValid && (
