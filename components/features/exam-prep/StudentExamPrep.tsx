@@ -231,9 +231,9 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
       setPendingSession(session);
       setIsInstructionsOpen(true);
-      toast.success("Questions are ready", {
-        description: `${session.firstBatch.data.length} questions are available now. Review instructions to begin.`,
-      });
+      // toast.success("Questions are ready", {
+      //   description: `${session.firstBatch.data.length} questions are available now. Review instructions to begin.`,
+      // });
     } catch {
       toast.error("Failed to start practice. Try again.");
     } finally {
@@ -613,10 +613,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                   <span className="text-xs text-muted-foreground">No subject selected</span>
                 )}
               </div>
-            </div>
-
-            <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
-              The first 5 questions are delivered immediately. More question batches continue generating and are loaded when needed.
             </div>
 
             {form.formState.submitCount > 0 && !form.formState.isValid && (

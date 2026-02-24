@@ -503,9 +503,6 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <Badge variant="secondary" className="px-2 py-0.5 text-[10px]">
-                LIVE EXAM
-              </Badge>
               <h2 className="mt-2 text-lg font-semibold">{request.title}</h2>
               <p className="text-xs text-muted-foreground">
                 Question {currentQuestionNumber} of {batchState.totalQuestions}
@@ -518,14 +515,6 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                   {formatTime(secondsLeft)}
                 </Badge>
               )}
-              <Badge
-                variant={batchState.isGenerating ? "outline" : "secondary"}
-                className="px-2 py-1 text-[11px]"
-              >
-                {batchState.isGenerating
-                  ? `Generating in background ${batchState.readyThroughPage}/${batchState.totalPages}`
-                  : "All batches ready"}
-              </Badge>
               <Button variant="outline" size="sm" onClick={onExit} disabled={isSubmittingExam}>
                 Exit Session
               </Button>
@@ -683,7 +672,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
               </div>
             ) : (
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
-                All batches are ready. You can jump to any question.
+                you can jump to any question by clicking on the question number in the progress grid.
               </div>
             )}
           </CardContent>
