@@ -273,9 +273,8 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
           <Card className="border-borderColorPrimary bg-backgroundSecondary">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Student Practice Setup</CardTitle>
+            <CardTitle className="text-lg">Exam Prep Setup</CardTitle>
             <CardDescription>
-              Required fields start empty. Complete setup to start an exam session.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -367,7 +366,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                           )}
                         >
                           <p className="text-sm font-medium">{subject.name}</p>
-                          <p className="text-xs text-muted-foreground">{subject.description}</p>
+                          {/* <p className="text-xs text-muted-foreground">{subject.description}</p> */}
                         </button>
                       );
                     })}
