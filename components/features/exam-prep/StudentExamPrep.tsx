@@ -670,9 +670,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs">
                 <p className="font-medium">Before you begin</p>
                 <ul className="mt-2 list-disc space-y-1 pl-4 text-muted-foreground">
-                  <li>The first 5 questions are ready immediately.</li>
-                  <li>Remaining batches continue generating in the background.</li>
-                  <li>You can move between loaded questions using the progress grid.</li>
+                  <li>You can move between questions using the progress grid.</li>
                   <li>
                     {pendingSession.request.time_limit ? (
                       <span className="inline-flex items-center gap-1">
@@ -690,7 +688,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                     </span>
                   </li>
                   <li>
-                    After submission, you will see a read-only review
+                    After submission, you will see a review of your answers.
                     {pendingSession.request.allows_explanation
                       ? " with explanations."
                       : "."}
