@@ -303,7 +303,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
 
       inFlight = true;
       try {
-        await loadPage(nextMissingPage, false);
+        await loadPage(nextMissingPage, true);
       } finally {
         inFlight = false;
       }
