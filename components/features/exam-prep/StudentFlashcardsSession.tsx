@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   Lightbulb,
   Loader2,
-  RotateCcw,
 } from "lucide-react";
 import {
   applySm2Rating,
@@ -71,6 +70,17 @@ const baseMetrics: FlashcardSessionMetrics = {
   again: 0,
   bestStreak: 0,
   xpEarned: 0,
+};
+
+const EMOJI_RETRY = "\u21A9\uFE0F";
+const EMOJI_KNOW = "\uD83E\uDD13";
+const EMOJI_STILL_LEARNING = "\uD83D\uDCDA";
+
+const ratingBadgeLabels: Record<FlashcardRating, string> = {
+  again: `${EMOJI_RETRY} Again / Retry`,
+  hard: `${EMOJI_STILL_LEARNING} Still learning`,
+  medium: `${EMOJI_KNOW} I know this`,
+  easy: `${EMOJI_KNOW} I know this`,
 };
 
 const sleep = (ms: number) =>
@@ -509,9 +519,9 @@ export function StudentFlashcardsSession({
             </div>
 
             <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
-              <p>🤓 I know this: {summary.known}</p>
-              <p>📚 Still learning: {summary.stillLearning}</p>
-              <p>↩️ Retry: {summary.retry}</p>
+              <p>{EMOJI_KNOW} I know this: {summary.known}</p>
+              <p>{EMOJI_STILL_LEARNING} Still learning: {summary.stillLearning}</p>
+              <p>{EMOJI_RETRY} Retry: {summary.retry}</p>
               <p>Due for review: {summary.dueForReview}</p>
             </div>
 
@@ -542,8 +552,8 @@ export function StudentFlashcardsSession({
               <div key={question.id} className="rounded-lg border border-borderColorPrimary bg-background px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">Card {question.order}</p>
-                  <Badge variant="secondary" className="px-2 py-0 text-[10px] uppercase">
-                    {ratings[question.id] ?? "unanswered"}
+                  <Badge variant="secondary" className="px-2 py-0 text-[10px]">
+                    {ratings[question.id] ? ratingBadgeLabels[ratings[question.id]] : "Not answered"}
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm font-medium">{question.prompt}</p>
@@ -580,11 +590,11 @@ export function StudentFlashcardsSession({
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">📚 Still learning</p>
+              <p className="text-xs text-muted-foreground">{EMOJI_STILL_LEARNING} Still learning</p>
               <p className="text-lg font-semibold">{stillLearningCount + retryCount}</p>
             </div>
             <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">🤓 Know</p>
+              <p className="text-xs text-muted-foreground">{EMOJI_KNOW} Know</p>
               <p className="text-lg font-semibold">{knownCount}</p>
             </div>
           </div>
@@ -614,23 +624,48 @@ export function StudentFlashcardsSession({
               <button
                 type="button"
                 onClick={() => setIsFlipped((prev) => !prev)}
-                className="relative w-full rounded-xl border border-borderColorPrimary bg-background p-6 text-left"
+                className="w-full text-left [perspective:1400px]"
+                aria-pressed={isFlipped}
+                aria-label={isFlipped ? "Show flashcard front" : "Show flashcard back"}
               >
-                <div className="mb-4 flex items-center justify-between border-b border-borderColorPrimary pb-3">
-                  <p className="text-sm font-medium">{isFlipped ? "Back" : "Front"}</p>
-                  <p className="text-sm text-muted-foreground">{currentQuestion.subjectName}</p>
-                </div>
+                <div
+                  className={`relative min-h-[380px] w-full rounded-xl border border-borderColorPrimary bg-background shadow-sm transition-transform duration-500 ease-out [transform-style:preserve-3d] ${
+                    isFlipped ? "[transform:rotateY(180deg)]" : "[transform:rotateY(0deg)]"
+                  }`}
+                >
+                  <div className="absolute inset-0 flex h-full flex-col rounded-xl p-6 [backface-visibility:hidden]">
+                    <div className="mb-4 flex items-center justify-between border-b border-borderColorPrimary pb-3">
+                      <p className="text-sm font-medium">Front</p>
+                      <p className="text-sm text-muted-foreground">{currentQuestion.subjectName}</p>
+                    </div>
 
-                <div className="flex min-h-[230px] items-center justify-center">
-                  <p className="max-w-3xl text-center text-2xl font-semibold leading-10">
-                    {isFlipped
-                      ? currentQuestion.explanation ?? "Think through the concept and practical use."
-                      : currentQuestion.prompt}
-                  </p>
-                </div>
+                    <div className="flex flex-1 items-center justify-center">
+                      <p className="max-w-3xl text-center text-2xl font-semibold leading-10">
+                        {currentQuestion.prompt}
+                      </p>
+                    </div>
 
-                <div className="mt-4 rounded-lg bg-secondary/50 px-3 py-2 text-center text-sm text-muted-foreground">
-                  Click anywhere on the card to flip
+                    <div className="mt-4 rounded-lg bg-secondary/50 px-3 py-2 text-center text-sm text-muted-foreground">
+                      Click anywhere on the card to flip
+                    </div>
+                  </div>
+
+                  <div className="absolute inset-0 flex h-full flex-col rounded-xl p-6 [transform:rotateY(180deg)] [backface-visibility:hidden]">
+                    <div className="mb-4 flex items-center justify-between border-b border-borderColorPrimary pb-3">
+                      <p className="text-sm font-medium">Back</p>
+                      <p className="text-sm text-muted-foreground">{currentQuestion.subjectName}</p>
+                    </div>
+
+                    <div className="flex flex-1 items-center justify-center">
+                      <p className="max-w-3xl text-center text-xl font-semibold leading-9">
+                        {currentQuestion.explanation ?? "Think through the concept and practical use."}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 rounded-lg bg-secondary/50 px-3 py-2 text-center text-sm text-muted-foreground">
+                      Choose your confidence to continue
+                    </div>
+                  </div>
                 </div>
               </button>
 
@@ -667,8 +702,7 @@ export function StudentFlashcardsSession({
                   disabled={!isFlipped}
                   onClick={() => applyAction("retry")}
                 >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  ↩️ Again/Retry
+                  {EMOJI_RETRY} Again/Retry
                 </Button>
                 <Button
                   type="button"
@@ -676,7 +710,7 @@ export function StudentFlashcardsSession({
                   disabled={!isFlipped}
                   onClick={() => applyAction("know")}
                 >
-                  🤓 I know this
+                  {EMOJI_KNOW} I know this
                 </Button>
                 <Button
                   type="button"
@@ -685,7 +719,7 @@ export function StudentFlashcardsSession({
                   disabled={!isFlipped}
                   onClick={() => applyAction("learning")}
                 >
-                  📚 Still learning
+                  {EMOJI_STILL_LEARNING} Still learning
                 </Button>
               </div>
             </div>

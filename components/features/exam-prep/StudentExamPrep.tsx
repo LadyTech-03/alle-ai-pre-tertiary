@@ -729,7 +729,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
                   <p className="font-medium text-foreground">Flashcard Flow</p>
                   <p className="mt-1">Click card to flip between front and back.</p>
-                  <p>Use simple actions: ↩️ Again/Retry, 🤓 I know this, 📚 Still learning.</p>
+                  <p>Use simple actions: ↩️ Again, 🤓 I know this, 📚 Still learning.</p>
                   <p>Progress updates as you go; review remains read-only after finish.</p>
                 </div>
               ) : (
