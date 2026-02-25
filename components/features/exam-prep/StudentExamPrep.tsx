@@ -54,24 +54,13 @@ import {
 } from "@/lib/api/eduQuestionRequests";
 import type { StudentDifficulty, StudentExamMode, SubjectOption } from "./types";
 import { StudentExamSession } from "./StudentExamSession";
-import { StudentFlashcardsSession, type FlashcardSessionRules } from "./StudentFlashcardsSession";
-import {
-  flashcardModes,
-  flashcardModeMap,
-  estimateFlashcardDurationMinutes,
-  estimateFlashcardXpPreview,
-  type FlashcardGameMode,
-} from "./flashcards/gamification";
+import { StudentFlashcardsSession } from "./StudentFlashcardsSession";
 
 const studentModeValues = ["flashcards", "theory", "mcq"] as const;
 const difficultyValues = ["adaptive", "easy", "medium", "hard"] as const;
 const focusValues = ["mixed", "weak", "recent"] as const;
 const questionCountValues = ["5", "10", "15", "20", "25", "30", "40", "50", "60"] as const;
 const durationValues = ["10", "15", "20", "30", "45", "60", "90", "120"] as const;
-const flashcardRoundValues = ["10", "15", "20", "30"] as const;
-const flashcardLivesValues = ["2", "3", "5"] as const;
-const flashcardTimerValues = ["none", "5", "10", "15", "20"] as const;
-const flashcardModeValues = ["normal", "rapid", "survival", "mastery"] as const;
 
 const studentPrepSchema = z.object({
   examMode: z.string(),
@@ -83,11 +72,6 @@ const studentPrepSchema = z.object({
   timedMode: z.boolean(),
   hintsEnabled: z.boolean(),
   explanationsEnabled: z.boolean(),
-  flashcardGameMode: z.string(),
-  flashcardRoundSize: z.string(),
-  flashcardLives: z.string(),
-  flashcardTimer: z.string(),
-  flashcardShuffle: z.boolean(),
 }).superRefine((data, ctx) => {
   const mode = data.examMode as StudentExamMode;
   if (!studentModeValues.includes(mode)) {
@@ -96,38 +80,6 @@ const studentPrepSchema = z.object({
       path: ["examMode"],
       message: "Select an exam type",
     });
-    return;
-  }
-
-  if (mode === "flashcards") {
-    if (!flashcardModeValues.includes(data.flashcardGameMode as (typeof flashcardModeValues)[number])) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["flashcardGameMode"],
-        message: "Select gameplay mode",
-      });
-    }
-    if (!flashcardRoundValues.includes(data.flashcardRoundSize as (typeof flashcardRoundValues)[number])) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["flashcardRoundSize"],
-        message: "Select round size",
-      });
-    }
-    if (!flashcardLivesValues.includes(data.flashcardLives as (typeof flashcardLivesValues)[number])) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["flashcardLives"],
-        message: "Select lives",
-      });
-    }
-    if (!flashcardTimerValues.includes(data.flashcardTimer as (typeof flashcardTimerValues)[number])) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["flashcardTimer"],
-        message: "Select round timer",
-      });
-    }
     return;
   }
 
@@ -185,7 +137,6 @@ interface StudentExamPrepProps {
 interface PreparedSession {
   mode: StudentExamMode;
   session: CreateMockQuestionSessionResponse;
-  flashcardRules?: FlashcardSessionRules;
 }
 
 const modeDetails: Array<{ id: StudentExamMode; label: string; icon: ComponentType<{ className?: string }>; note: string }> = [
@@ -193,7 +144,7 @@ const modeDetails: Array<{ id: StudentExamMode; label: string; icon: ComponentTy
     id: "flashcards",
     label: "Flash Cards",
     icon: Trophy,
-    note: "Round-based memory challenge with score, streak and lives.",
+    note: "Click-to-flip cards to test recall with simple progress tracking.",
   },
   {
     id: "theory",
@@ -236,13 +187,6 @@ const formatSessionDuration = (seconds: number | null) => {
   return `${totalMinutes} minutes`;
 };
 
-const formatFlashcardTimer = (value: string) => {
-  if (!value || value === "none") {
-    return "Untimed";
-  }
-  return `${value} minutes`;
-};
-
 export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   const { orgId } = useOrgSessionStore();
   const activeOrgId = orgId ?? "1";
@@ -265,65 +209,26 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
       timedMode: false,
       hintsEnabled: false,
       explanationsEnabled: false,
-      flashcardGameMode: "",
-      flashcardRoundSize: "",
-      flashcardLives: "",
-      flashcardTimer: "none",
-      flashcardShuffle: true,
     },
   });
 
   const values = form.watch();
   const isFlashcardsMode = values.examMode === "flashcards";
-  const selectedFlashcardMode = flashcardModeValues.includes(
-    values.flashcardGameMode as (typeof flashcardModeValues)[number]
-  )
-    ? (values.flashcardGameMode as FlashcardGameMode)
-    : null;
-  const selectedFlashcardModeInfo = selectedFlashcardMode
-    ? flashcardModeMap[selectedFlashcardMode]
-    : null;
-  const selectedFlashcardRoundSize = values.flashcardRoundSize
-    ? Number(values.flashcardRoundSize)
-    : null;
-  const selectedFlashcardTimerMinutes =
-    values.flashcardTimer === "none" ? null : values.flashcardTimer ? Number(values.flashcardTimer) : null;
-  const flashcardEstimatedMinutes =
-    selectedFlashcardMode && selectedFlashcardRoundSize
-      ? estimateFlashcardDurationMinutes(
-          selectedFlashcardMode,
-          selectedFlashcardRoundSize,
-          selectedFlashcardTimerMinutes
-        )
-      : null;
-  const flashcardXpPreview =
-    selectedFlashcardMode && selectedFlashcardRoundSize
-      ? estimateFlashcardXpPreview(selectedFlashcardMode, selectedFlashcardRoundSize)
-      : null;
 
   const selectedSubjects = useMemo(
     () => subjects.filter((subject) => values.subjects.includes(subject.id)),
     [subjects, values.subjects]
   );
 
-  const completedRequiredFields = isFlashcardsMode
-    ? [
-        values.examMode,
-        values.subjects.length > 0 ? "subjects" : "",
-        values.flashcardGameMode,
-        values.flashcardRoundSize,
-        values.flashcardLives,
-        values.flashcardTimer,
-      ].filter(Boolean).length
-    : [
-        values.examMode,
-        values.difficulty,
-        values.focus,
-        values.questionCount,
-        values.subjects.length > 0 ? "subjects" : "",
-      ].filter(Boolean).length + (values.timedMode ? (values.durationMinutes !== "none" ? 1 : 0) : 0);
+  const completedRequiredFields = [
+    values.examMode,
+    values.difficulty,
+    values.focus,
+    values.questionCount,
+    values.subjects.length > 0 ? "subjects" : "",
+  ].filter(Boolean).length + (values.timedMode ? (values.durationMinutes !== "none" ? 1 : 0) : 0);
 
-  const requiredFieldCount = isFlashcardsMode ? 6 : (values.timedMode ? 6 : 5);
+  const requiredFieldCount = values.timedMode ? 6 : 5;
 
   const onSubmit = async (payload: StudentPrepFormValues) => {
     const selectedSubjectMeta = subjects
@@ -340,67 +245,29 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
     try {
       setIsGenerating(true);
-      if (mode === "flashcards") {
-        const flashcardGameMode = payload.flashcardGameMode as FlashcardGameMode;
-        const flashcardRules: FlashcardSessionRules = {
-          mode: flashcardGameMode,
-          roundSize: Number(payload.flashcardRoundSize),
-          lives: Number(payload.flashcardLives),
-          shuffle: payload.flashcardShuffle,
-          timerMinutes: payload.flashcardTimer === "none" ? null : Number(payload.flashcardTimer),
-        };
-        const timeLimitSeconds =
-          flashcardGameMode === "rapid"
-            ? 60
-            : flashcardRules.timerMinutes === null
-              ? null
-              : flashcardRules.timerMinutes * 60;
+      const questionCount = Number(payload.questionCount);
+      const durationMinutes =
+        payload.durationMinutes === "none" ? null : Number(payload.durationMinutes);
 
-        const session = await eduQuestionRequestsApi.createMockQuestionSession({
-          organisationId: activeOrgId,
-          title: `${modeLabel} Round`,
-          type: modeToRequestType[mode],
-          difficulty: "adaptive",
-          number: flashcardRules.roundSize,
-          timeLimitSeconds,
-          allowsExplanation: payload.explanationsEnabled,
-          hintsCount: payload.hintsEnabled ? 3 : 0,
-          focus: "mixed",
-          subjects: selectedSubjectMeta,
-          additionalNote: `${flashcardModeMap[flashcardGameMode].label} with ${flashcardRules.lives} lives and ${flashcardRules.shuffle ? "shuffle on" : "shuffle off"}.`,
-          batchSize: 5,
-        });
+      const session = await eduQuestionRequestsApi.createMockQuestionSession({
+        organisationId: activeOrgId,
+        title: `${modeLabel} Practice`,
+        type: modeToRequestType[mode],
+        difficulty: payload.difficulty,
+        number: questionCount,
+        timeLimitSeconds: durationMinutes === null ? null : durationMinutes * 60,
+        allowsExplanation: payload.explanationsEnabled,
+        hintsCount: payload.hintsEnabled ? 3 : 0,
+        focus: payload.focus,
+        subjects: selectedSubjectMeta,
+        additionalNote: `Focus: ${focusLabels[payload.focus as (typeof focusValues)[number]]}.`,
+        batchSize: 5,
+      });
 
-        setPendingSession({
-          mode,
-          session,
-          flashcardRules,
-        });
-      } else {
-        const questionCount = Number(payload.questionCount);
-        const durationMinutes =
-          payload.durationMinutes === "none" ? null : Number(payload.durationMinutes);
-
-        const session = await eduQuestionRequestsApi.createMockQuestionSession({
-          organisationId: activeOrgId,
-          title: `${modeLabel} Practice`,
-          type: modeToRequestType[mode],
-          difficulty: payload.difficulty,
-          number: questionCount,
-          timeLimitSeconds: durationMinutes === null ? null : durationMinutes * 60,
-          allowsExplanation: payload.explanationsEnabled,
-          hintsCount: payload.hintsEnabled ? 3 : 0,
-          focus: payload.focus,
-          subjects: selectedSubjectMeta,
-          additionalNote: `Focus: ${focusLabels[payload.focus as (typeof focusValues)[number]]}.`,
-          batchSize: 5,
-        });
-
-        setPendingSession({
-          mode,
-          session,
-        });
-      }
+      setPendingSession({
+        mode,
+        session,
+      });
 
       setIsInstructionsOpen(true);
       toast.success("Questions are ready", {
@@ -430,12 +297,11 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   };
 
   if (activeSession) {
-    if (activeSession.mode === "flashcards" && activeSession.flashcardRules) {
+    if (activeSession.mode === "flashcards") {
       return (
         <StudentFlashcardsSession
           request={activeSession.session.request}
           initialBatch={activeSession.session.firstBatch}
-          rules={activeSession.flashcardRules}
           onExit={() => setActiveSession(null)}
         />
       );
@@ -560,187 +426,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 )}
               />
 
-              {isFlashcardsMode ? (
-                <div className="space-y-4 rounded-lg border border-borderColorPrimary bg-background p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">Flashcards Rules</p>
-                    <Badge variant="secondary" className="px-2 py-0 text-[10px]">
-                      GAMIFIED
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Flashcards use round rules. Standard exam controls are disabled for this mode.
-                  </p>
-
-                  <FormField
-                    control={form.control}
-                    name="flashcardGameMode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs text-muted-foreground">Gameplay Mode</FormLabel>
-                        <div className="grid gap-2 md:grid-cols-2">
-                          <TooltipProvider>
-                            {flashcardModes.map((mode) => {
-                              const active = field.value === mode.id;
-                              return (
-                                <div
-                                  key={mode.id}
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={() => field.onChange(mode.id)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === "Enter" || event.key === " ") {
-                                      event.preventDefault();
-                                      field.onChange(mode.id);
-                                    }
-                                  }}
-                                  className={cn(
-                                    "rounded-lg border p-3 text-left",
-                                    active
-                                      ? "border-primary bg-secondary"
-                                      : "border-borderColorPrimary bg-background hover:bg-secondary/60"
-                                  )}
-                                >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <p className="text-sm font-semibold">{mode.label}</p>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <button
-                                          type="button"
-                                          onClick={(event) => event.stopPropagation()}
-                                          className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:text-foreground"
-                                          aria-label={`Info: ${mode.label}`}
-                                        >
-                                          <Info className="h-3.5 w-3.5" />
-                                        </button>
-                                      </TooltipTrigger>
-                                      <TooltipContent className="max-w-[220px] text-xs">
-                                        {mode.description}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                  <p className="mt-1 text-xs text-muted-foreground">
-                                    XP x{mode.xpMultiplier}
-                                  </p>
-                                </div>
-                              );
-                            })}
-                          </TooltipProvider>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <FormField
-                      control={form.control}
-                      name="flashcardRoundSize"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs text-muted-foreground">Cards in Round</FormLabel>
-                          <Select value={field.value || undefined} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select cards" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {flashcardRoundValues.map((value) => (
-                                <SelectItem key={value} value={value}>
-                                  {value}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="flashcardLives"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs text-muted-foreground">Lives</FormLabel>
-                          <Select value={field.value || undefined} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select lives" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {flashcardLivesValues.map((value) => (
-                                <SelectItem key={value} value={value}>
-                                  {value}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="flashcardTimer"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs text-muted-foreground">Round Timer</FormLabel>
-                          <Select value={field.value || undefined} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select timer" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">Untimed</SelectItem>
-                              {flashcardTimerValues
-                                .filter((item) => item !== "none")
-                                .map((value) => (
-                                  <SelectItem key={value} value={value}>
-                                    {value} min
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {selectedFlashcardModeInfo ? (
-                    <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
-                      <p className="font-medium text-foreground">{selectedFlashcardModeInfo.label}</p>
-                      <p className="mt-1">{selectedFlashcardModeInfo.description}</p>
-                      {selectedFlashcardModeInfo.id === "rapid" ? (
-                        <p className="mt-1">Timer is fixed at 60 seconds in Rapid Mode.</p>
-                      ) : null}
-                      {selectedFlashcardModeInfo.id === "survival" ? (
-                        <p className="mt-1">One mistake ends the session in Survival Mode.</p>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  <FormField
-                    control={form.control}
-                    name="flashcardShuffle"
-                    render={({ field }) => (
-                      <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <Label className="text-sm">Shuffle Deck</Label>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              ) : null}
-
-              <div className={cn("space-y-4", isFlashcardsMode && "pointer-events-none opacity-60")}>
+              <div className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -754,7 +440,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                               key={difficulty}
                               type="button"
                               size="sm"
-                              disabled={isFlashcardsMode}
                               variant={field.value === difficulty ? "secondary" : "outline"}
                               onClick={() => field.onChange(difficulty)}
                             >
@@ -776,7 +461,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                         <Select
                           value={field.value || undefined}
                           onValueChange={field.onChange}
-                          disabled={isFlashcardsMode}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -805,7 +489,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                         <Select
                           value={field.value || undefined}
                           onValueChange={field.onChange}
-                          disabled={isFlashcardsMode}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -833,7 +516,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                         <FormLabel className="text-xs text-muted-foreground">Duration (minutes)</FormLabel>
                         <Select
                           value={field.value || undefined}
-                          disabled={isFlashcardsMode}
                           onValueChange={(value) => {
                             field.onChange(value);
                             form.setValue("timedMode", value !== "none", {
@@ -871,7 +553,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                         <Label className="text-sm">Timed Mode</Label>
                         <Switch
                           checked={field.value}
-                          disabled={isFlashcardsMode}
                           onCheckedChange={(checked) => {
                             field.onChange(checked);
                             if (!checked) {
@@ -945,83 +626,38 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                   <p className="text-xs text-muted-foreground">Hints</p>
                   <p className="text-sm font-semibold">{values.hintsEnabled ? "Enabled" : "Disabled"}</p>
                 </div>
-                {isFlashcardsMode ? (
-                  <>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Gameplay Mode</p>
-                      <p className="text-sm font-semibold">
-                        {selectedFlashcardModeInfo ? selectedFlashcardModeInfo.label : "Not selected"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Round Size</p>
-                      <p className="text-sm font-semibold">
-                        {values.flashcardRoundSize ? `${values.flashcardRoundSize} cards` : "Not selected"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Lives</p>
-                      <p className="text-sm font-semibold">
-                        {values.flashcardLives ? values.flashcardLives : "Not selected"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Round Timer</p>
-                      <p className="text-sm font-semibold">{formatFlashcardTimer(values.flashcardTimer)}</p>
-                    </div>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Estimated Time</p>
-                      <p className="text-sm font-semibold">
-                        {flashcardEstimatedMinutes ? `${flashcardEstimatedMinutes} min` : "Not selected"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">XP Reward Preview</p>
-                      <p className="text-sm font-semibold">
-                        {flashcardXpPreview ? `${flashcardXpPreview} XP` : "Not selected"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Shuffle</p>
-                      <p className="text-sm font-semibold">{values.flashcardShuffle ? "On" : "Off"}</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Difficulty</p>
-                      <p className="text-sm font-semibold">
-                        {values.difficulty
-                          ? difficultyLabels[values.difficulty as StudentDifficulty]
-                          : "Not selected"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Questions</p>
-                      <p className="text-sm font-semibold">
-                        {values.questionCount ? values.questionCount : "Not selected"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Duration</p>
-                      <p className="text-sm font-semibold">
-                        {values.timedMode
-                          ? values.durationMinutes !== "none"
-                            ? `${values.durationMinutes} min`
-                            : "Not selected"
-                          : "Untimed"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Focus</p>
-                      <p className="text-sm font-semibold">
-                        {values.focus
-                          ? focusLabels[values.focus as (typeof focusValues)[number]]
-                          : "Not selected"}
-                      </p>
-                    </div>
-                  </>
-                )}
+                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Difficulty</p>
+                  <p className="text-sm font-semibold">
+                    {values.difficulty
+                      ? difficultyLabels[values.difficulty as StudentDifficulty]
+                      : "Not selected"}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Questions</p>
+                  <p className="text-sm font-semibold">
+                    {values.questionCount ? values.questionCount : "Not selected"}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="text-sm font-semibold">
+                    {values.timedMode
+                      ? values.durationMinutes !== "none"
+                        ? `${values.durationMinutes} min`
+                        : "Not selected"
+                      : "Untimed"}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Focus</p>
+                  <p className="text-sm font-semibold">
+                    {values.focus
+                      ? focusLabels[values.focus as (typeof focusValues)[number]]
+                      : "Not selected"}
+                  </p>
+                </div>
               </div>
 
               <div>
@@ -1089,25 +725,12 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 </div>
               </div>
 
-              {pendingSession.mode === "flashcards" && pendingSession.flashcardRules ? (
+              {pendingSession.mode === "flashcards" ? (
                 <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
-                  <p className="font-medium text-foreground">Flashcard Rules</p>
-                  <p className="mt-1">
-                    Mode: {flashcardModeMap[pendingSession.flashcardRules.mode].label}
-                  </p>
-                  <p className="mt-1">Cards: {pendingSession.flashcardRules.roundSize}</p>
-                  <p>Lives: {pendingSession.flashcardRules.lives}</p>
-                  <p>Shuffle: {pendingSession.flashcardRules.shuffle ? "On" : "Off"}</p>
-                  <p>
-                    Rating XP: Easy +15, Medium +10, Hard +5, Again +0. Streak levels add bonus XP.
-                  </p>
-                  <p>Swipe controls: Right = Knew it, Left = Again, Up = Hard, Down = Easy.</p>
-                  {pendingSession.flashcardRules.mode === "rapid" ? (
-                    <p>Rapid Mode runs on a fixed 60-second timer.</p>
-                  ) : null}
-                  {pendingSession.flashcardRules.mode === "survival" ? (
-                    <p>Survival Mode ends immediately after the first mistake.</p>
-                  ) : null}
+                  <p className="font-medium text-foreground">Flashcard Flow</p>
+                  <p className="mt-1">Click card to flip between front and back.</p>
+                  <p>Use simple actions: ↩️ Again/Retry, 🤓 I know this, 📚 Still learning.</p>
+                  <p>Progress updates as you go; review remains read-only after finish.</p>
                 </div>
               ) : (
                 <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
