@@ -43,6 +43,7 @@ import {
   Clock3,
   AlertTriangle,
   ShieldCheck,
+  TimerOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -64,11 +65,11 @@ const durationValues = ["10", "15", "20", "30", "45", "60", "90", "120"] as cons
 
 const studentPrepSchema = z.object({
   examMode: z.string(),
-  difficulty: z.string(),
-  focus: z.string(),
+  // difficulty: z.string(),
+  // focus: z.string(),
   questionCount: z.string(),
   durationMinutes: z.string(),
-  subjects: z.array(z.string()).min(1, "Select at least one subject"),
+  subjectId: z.string().min(1, "Select a subject"),
   timedMode: z.boolean(),
   hintsEnabled: z.boolean(),
   explanationsEnabled: z.boolean(),
@@ -83,21 +84,21 @@ const studentPrepSchema = z.object({
     return;
   }
 
-  if (!difficultyValues.includes(data.difficulty as StudentDifficulty)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["difficulty"],
-      message: "Select difficulty",
-    });
-  }
+  // if (!difficultyValues.includes(data.difficulty as StudentDifficulty)) {
+  //   ctx.addIssue({
+  //     code: z.ZodIssueCode.custom,
+  //     path: ["difficulty"],
+  //     message: "Select difficulty",
+  //   });
+  // }
 
-  if (!focusValues.includes(data.focus as (typeof focusValues)[number])) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["focus"],
-      message: "Select focus area",
-    });
-  }
+  // if (!focusValues.includes(data.focus as (typeof focusValues)[number])) {
+  //   ctx.addIssue({
+  //     code: z.ZodIssueCode.custom,
+  //     path: ["focus"],
+  //     message: "Select focus area",
+  //   });
+  // }
 
   if (!questionCountValues.includes(data.questionCount as (typeof questionCountValues)[number])) {
     ctx.addIssue({
@@ -201,11 +202,11 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
     reValidateMode: "onChange",
     defaultValues: {
       examMode: "",
-      difficulty: "",
-      focus: "",
+      // difficulty: "",
+      // focus: "",
       questionCount: "",
       durationMinutes: "none",
-      subjects: [],
+      subjectId: "",
       timedMode: false,
       hintsEnabled: false,
       explanationsEnabled: false,
@@ -215,28 +216,26 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   const values = form.watch();
   const isFlashcardsMode = values.examMode === "flashcards";
 
-  const selectedSubjects = useMemo(
-    () => subjects.filter((subject) => values.subjects.includes(subject.id)),
-    [subjects, values.subjects]
+  const selectedSubject = useMemo(
+    () => subjects.find((subject) => subject.id === values.subjectId) ?? null,
+    [subjects, values.subjectId]
   );
 
   const completedRequiredFields = [
     values.examMode,
-    values.difficulty,
-    values.focus,
+    // values.difficulty,
+    // values.focus,
     values.questionCount,
-    values.subjects.length > 0 ? "subjects" : "",
+    values.subjectId ? "subject" : "",
   ].filter(Boolean).length + (values.timedMode ? (values.durationMinutes !== "none" ? 1 : 0) : 0);
 
   const requiredFieldCount = values.timedMode ? 6 : 5;
 
   const onSubmit = async (payload: StudentPrepFormValues) => {
-    const selectedSubjectMeta = subjects
-      .filter((subject) => payload.subjects.includes(subject.id))
-      .map((subject) => ({ id: subject.id, name: subject.name }));
+    const selectedSubjectMeta = subjects.find((subject) => subject.id === payload.subjectId);
 
-    if (selectedSubjectMeta.length === 0) {
-      toast.error("Select at least one subject.");
+    if (!selectedSubjectMeta) {
+      toast.error("Select a subject.");
       return;
     }
 
@@ -253,14 +252,13 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
         organisationId: activeOrgId,
         title: `${modeLabel} Practice`,
         type: modeToRequestType[mode],
-        difficulty: payload.difficulty,
+        // difficulty: payload.difficulty,
         number: questionCount,
         timeLimitSeconds: durationMinutes === null ? null : durationMinutes * 60,
         allowsExplanation: payload.explanationsEnabled,
         hintsCount: payload.hintsEnabled ? 3 : 0,
-        focus: payload.focus,
-        subjects: selectedSubjectMeta,
-        additionalNote: `Focus: ${focusLabels[payload.focus as (typeof focusValues)[number]]}.`,
+        // focus: payload.focus,
+        subjects: [{ id: selectedSubjectMeta.id, name: selectedSubjectMeta.name }],
         batchSize: 5,
       });
 
@@ -319,12 +317,11 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   return (
     <>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
-          <Card className="border-borderColorPrimary bg-backgroundSecondary">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+          <Card className="border-borderColorPrimary bg-muted/50">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Student Practice Setup</CardTitle>
+              <CardTitle className="text-lg">Prepare for your Exam/Test</CardTitle>
               <CardDescription>
-                Required fields start empty. Choose an exam type to configure session rules.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -333,7 +330,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 name="examMode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Exam Type</FormLabel>
+                    <FormLabel className="text-muted-foreground text-xs">Select Exam/Test Type</FormLabel>
                     <div className="grid gap-3 md:grid-cols-3">
                       <TooltipProvider>
                         {modeDetails.map((mode) => {
@@ -353,14 +350,15 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                                 }
                               }}
                               className={cn(
-                                "rounded-lg border p-4 text-left",
+                                "flex items-center justify-between rounded-lg border p-4 text-left border-borderColorPrimary",
                                 active
-                                  ? "border-primary bg-secondary"
-                                  : "border-borderColorPrimary bg-background hover:bg-secondary/60"
+                                  ? " bg-backgroundSecondary"
+                                  : "hover:bg-accent"
                               )}
                             >
+                              <p className="text-sm font-semibold">{mode.label}</p>
                               <div className="flex items-start justify-between gap-2">
-                                <Icon className="h-4 w-4" />
+                                {/* <Icon className="h-4 w-4" /> */}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <button
@@ -377,7 +375,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
-                              <p className="mt-2 text-sm font-semibold">{mode.label}</p>
                             </div>
                           );
                         })}
@@ -390,187 +387,140 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
               <FormField
                 control={form.control}
-                name="subjects"
+                name="subjectId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subjects</FormLabel>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {subjects.map((subject) => {
-                        const selected = field.value.includes(subject.id);
-
-                        return (
-                          <button
-                            key={subject.id}
-                            type="button"
-                            onClick={() => {
-                              const next = selected
-                                ? field.value.filter((id) => id !== subject.id)
-                                : [...field.value, subject.id];
-                              field.onChange(next);
-                            }}
-                            className={cn(
-                              "rounded-lg border px-3 py-2 text-left",
-                              selected
-                                ? "border-primary bg-secondary"
-                                : "border-borderColorPrimary bg-background"
-                            )}
-                          >
-                            <p className="text-sm font-medium">{subject.name}</p>
-                            <p className="text-xs text-muted-foreground">{subject.description}</p>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <FormLabel className="text-muted-foreground text-xs">Subject</FormLabel>
+                    <Select
+                      value={field.value || undefined}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subject" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {subjects.map((subject) => (
+                          <SelectItem key={subject.id} value={subject.id}>
+                            {subject.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <div className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="difficulty"
-                    render={({ field }) => (
-                      <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <FormLabel className="text-xs text-muted-foreground">Difficulty</FormLabel>
-                        <div className="grid grid-cols-2 gap-2">
-                          {(Object.keys(difficultyLabels) as StudentDifficulty[]).map((difficulty) => (
-                            <Button
-                              key={difficulty}
-                              type="button"
-                              size="sm"
-                              variant={field.value === difficulty ? "secondary" : "outline"}
-                              onClick={() => field.onChange(difficulty)}
-                            >
-                              {difficultyLabels[difficulty]}
-                            </Button>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="focus"
-                    render={({ field }) => (
-                      <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <FormLabel className="text-xs text-muted-foreground">Focus</FormLabel>
-                        <Select
-                          value={field.value || undefined}
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select focus area" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="mixed">Mixed Topics</SelectItem>
-                            <SelectItem value="weak">Weak Topics First</SelectItem>
-                            <SelectItem value="recent">Recent Topics</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="questionCount"
-                    render={({ field }) => (
-                      <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <FormLabel className="text-xs text-muted-foreground">Number of Questions</FormLabel>
-                        <Select
-                          value={field.value || undefined}
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select question count" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {questionCountValues.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="durationMinutes"
-                    render={({ field }) => (
-                      <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                        <FormLabel className="text-xs text-muted-foreground">Duration (minutes)</FormLabel>
-                        <Select
-                          value={field.value || undefined}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            form.setValue("timedMode", value !== "none", {
-                              shouldDirty: true,
-                              shouldValidate: true,
-                            });
-                          }}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select duration" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">No time limit (Untimed)</SelectItem>
-                            {durationValues.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* <FormField
+                  control={form.control}
+                  name="difficulty"
+                  render={({ field }) => (
+                    <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
+                      <FormLabel className="text-xs text-muted-foreground">Difficulty</FormLabel>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(Object.keys(difficultyLabels) as StudentDifficulty[]).map((difficulty) => (
+                          <Button
+                            key={difficulty}
+                            type="button"
+                            size="sm"
+                            variant={field.value === difficulty ? "secondary" : "outline"}
+                            onClick={() => field.onChange(difficulty)}
+                          >
+                            {difficultyLabels[difficulty]}
+                          </Button>
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                /> */}
+                {/* <FormField
+                  control={form.control}
+                  name="focus"
+                  render={({ field }) => (
+                    <FormItem className="rounded-lg">
+                      <FormLabel className="text-xs text-muted-foreground">Choose Focus Area</FormLabel>
+                      <Select
+                        value={field.value || undefined}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select focus area" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="mixed">Mixed Topics</SelectItem>
+                          <SelectItem value="weak">Weak Topics First</SelectItem>
+                          <SelectItem value="recent">Recent Topics</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                /> */}
 
                 <FormField
                   control={form.control}
-                  name="timedMode"
+                  name="questionCount"
                   render={({ field }) => (
-                    <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <Label className="text-sm">Timed Mode</Label>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={(checked) => {
-                            field.onChange(checked);
-                            if (!checked) {
-                              form.setValue("durationMinutes", "none", {
-                                shouldDirty: true,
-                                shouldValidate: true,
-                              });
-                              return;
-                            }
-                            if (form.getValues("durationMinutes") === "none") {
-                              form.setValue("durationMinutes", "30", {
-                                shouldDirty: true,
-                                shouldValidate: true,
-                              });
-                            }
-                          }}
-                        />
-                      </div>
+                    <FormItem className="rounded-lg">
+                      <FormLabel className="text-xs text-muted-foreground">Questions</FormLabel>
+                      <Select
+                        value={field.value || undefined}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="How many questions ?" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {questionCountValues.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="durationMinutes"
+                  render={({ field }) => (
+                    <FormItem className="rounded-lg">
+                      <FormLabel className="text-xs text-muted-foreground">Duration (minutes)</FormLabel>
+                      <Select
+                        value={field.value || undefined}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          form.setValue("timedMode", value !== "none", {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select duration" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">No time limit</SelectItem>
+                          {durationValues.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -602,84 +552,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                   )}
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-borderColorPrimary bg-backgroundSecondary">
-            <CardHeader>
-              <CardTitle className="text-lg">Session Preview</CardTitle>
-              <CardDescription>
-                Live summary of student selections ({completedRequiredFields}/{requiredFieldCount} required fields complete).
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                  <p className="text-xs text-muted-foreground">Mode</p>
-                  <p className="text-sm font-semibold">
-                    {values.examMode
-                      ? modeDetails.find((mode) => mode.id === values.examMode)?.label
-                      : "Not selected"}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                  <p className="text-xs text-muted-foreground">Hints</p>
-                  <p className="text-sm font-semibold">{values.hintsEnabled ? "Enabled" : "Disabled"}</p>
-                </div>
-                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                  <p className="text-xs text-muted-foreground">Difficulty</p>
-                  <p className="text-sm font-semibold">
-                    {values.difficulty
-                      ? difficultyLabels[values.difficulty as StudentDifficulty]
-                      : "Not selected"}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                  <p className="text-xs text-muted-foreground">Questions</p>
-                  <p className="text-sm font-semibold">
-                    {values.questionCount ? values.questionCount : "Not selected"}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                  <p className="text-xs text-muted-foreground">Duration</p>
-                  <p className="text-sm font-semibold">
-                    {values.timedMode
-                      ? values.durationMinutes !== "none"
-                        ? `${values.durationMinutes} min`
-                        : "Not selected"
-                      : "Untimed"}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                  <p className="text-xs text-muted-foreground">Focus</p>
-                  <p className="text-sm font-semibold">
-                    {values.focus
-                      ? focusLabels[values.focus as (typeof focusValues)[number]]
-                      : "Not selected"}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs text-muted-foreground">Selected Subjects</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedSubjects.length > 0 ? (
-                    selectedSubjects.map((subject) => (
-                      <Badge key={subject.id} variant="secondary" className="px-2 py-1 text-[11px]">
-                        {subject.name}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-xs text-muted-foreground">No subject selected</span>
-                  )}
-                </div>
-              </div>
-
-              {form.formState.submitCount > 0 && !form.formState.isValid && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                  Complete all required fields before starting a practice session.
-                </div>
-              )}
 
               <Button type="submit" className="w-full" disabled={isGenerating}>
                 {isGenerating ? (
@@ -689,8 +561,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    {isFlashcardsMode ? "Start Flashcard Session" : "Start Practice"}
+                    {isFlashcardsMode ? "Begin Test" : "Begin Test"}
                   </>
                 )}
               </Button>
@@ -702,9 +573,8 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
       <Dialog open={isInstructionsOpen} onOpenChange={handleInstructionModalChange}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Session Instructions</DialogTitle>
+            <DialogTitle>Test Instructions</DialogTitle>
             <DialogDescription>
-              Confirm the rules before you begin.
             </DialogDescription>
           </DialogHeader>
 
@@ -712,7 +582,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                  <p className="text-xs text-muted-foreground">Mode</p>
+                  <p className="text-xs text-muted-foreground">Exam Type</p>
                   <p className="text-sm font-semibold">
                     {modeDetails.find((mode) => mode.id === pendingSession.mode)?.label}
                   </p>
@@ -725,25 +595,18 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 </div>
               </div>
 
-              {pendingSession.mode === "flashcards" ? (
+              {pendingSession.mode === "flashcards" && (
                 <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
                   <p className="font-medium text-foreground">Flashcard Flow</p>
                   <p className="mt-1">Click card to flip between front and back.</p>
                   <p>Use simple actions: ↩️ Again, 🤓 I know this, 📚 Still learning.</p>
                   <p>Progress updates as you go; review remains read-only after finish.</p>
                 </div>
-              ) : (
-                <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
-                  <p className="font-medium text-foreground">Standard Exam Rules</p>
-                  <p className="mt-1">First batch is available immediately.</p>
-                  <p>Other batches continue generating and are prefetched in the background.</p>
-                  <p>Submit at the end or when timer expires.</p>
-                </div>
               )}
 
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
                 <p className="font-medium text-foreground">Before You Begin</p>
-                <ul className="mt-2 list-disc space-y-1 pl-4">
+                <ul className="mt-2 space-y-1 list-none">
                   <li>
                     {pendingSession.session.request.time_limit ? (
                       <span className="inline-flex items-center gap-1">
@@ -751,7 +614,10 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                         Timed sessions auto-submit at 00:00.
                       </span>
                     ) : (
-                      "Untimed sessions do not auto-submit."
+                      <span className="inline-flex items-center gap-1">
+                        <TimerOff className="h-3.5 w-3.5" />
+                        Untimed sessions do not auto-submit
+                      </span>
                     )}
                   </li>
                   <li>
@@ -763,7 +629,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                   <li>
                     <span className="inline-flex items-center gap-1">
                       <ShieldCheck className="h-3.5 w-3.5" />
-                      After submission, review is read-only
+                      You&apos;ll be able to view your results after submission
                       {pendingSession.session.request.allows_explanation ? " with explanations." : "."}
                     </span>
                   </li>
@@ -777,7 +643,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
               Back to Setup
             </Button>
             <Button type="button" onClick={handleBeginExam} disabled={!pendingSession}>
-              Begin Session
+              Begin
             </Button>
           </DialogFooter>
         </DialogContent>

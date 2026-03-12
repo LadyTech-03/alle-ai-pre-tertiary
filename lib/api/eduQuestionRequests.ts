@@ -122,12 +122,12 @@ export interface CreateMockQuestionSessionPayload {
   organisationId: number | string;
   title: string;
   type: QuestionRequestType;
-  difficulty: string;
+  difficulty?: string;
   number: number;
   timeLimitSeconds: number | null;
   allowsExplanation: boolean;
   hintsCount: number;
-  focus: string;
+  focus?: string;
   subjects: Array<{ id: string; name: string }>;
   additionalNote?: string;
   batchSize?: number;
@@ -264,14 +264,14 @@ const generatePrompt = (
   difficulty: string
 ) => {
   if (requestType === "theory") {
-    return `Question ${order}: Explain the key concept in ${subjectName} at a ${difficulty} level, using a practical example.`;
+    return `Explain the key concept in ${subjectName} at a ${difficulty} level, using a practical example.`;
   }
 
   if (requestType === "flashcards") {
-    return `Flash card ${order}: Define an important ${subjectName} term and mention one real use case.`;
+    return `Define an important ${subjectName} term and mention one real use case.`;
   }
 
-  return `Question ${order}: Which option best answers this ${difficulty} ${subjectName} objective item?`;
+  return `Which option best answers this ${difficulty} ${subjectName} objective item?`;
 };
 
 const buildGeneratedQuestions = (payload: CreateMockQuestionSessionPayload): GeneratedExamQuestion[] => {
@@ -302,7 +302,7 @@ const buildGeneratedQuestions = (payload: CreateMockQuestionSessionPayload): Gen
       id: `${subject.id}-q-${order}`,
       order,
       kind,
-      prompt: generatePrompt(payload.type, order, subject.name, payload.difficulty),
+      prompt: generatePrompt(payload.type, order, subject.name, payload.difficulty || 'medium'),
       options:
         kind === "mcq"
           ? optionIds.map((id, optionIndex) => ({
@@ -484,7 +484,7 @@ export const eduQuestionRequestsApi = {
       timeLimitSeconds: payload.timeLimitSeconds,
       allowsExplanation: payload.allowsExplanation,
       hintsCount: payload.hintsCount,
-      difficulty: payload.difficulty,
+      difficulty: payload.difficulty || 'medium',
       additionalNote: payload.additionalNote,
     });
 

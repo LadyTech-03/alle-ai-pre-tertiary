@@ -499,40 +499,39 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
 
   return (
     <div className="space-y-4">
-      <Card className="border-borderColorPrimary bg-backgroundSecondary">
+      <Card className="border-borderColorPrimary bg-muted/80">
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="mt-2 text-lg font-semibold">{request.title}</h2>
+              <h2 className="mt-2 text-lg font-semibold">{request.title} - ({currentQuestion.subjectName})</h2>
               <p className="text-xs text-muted-foreground">
                 Question {currentQuestionNumber} of {batchState.totalQuestions}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {secondsLeft !== null && (
-                <Badge variant="outline" className="px-2 py-1 text-[11px]">
+                <Badge variant="outline" className="px-2 py-1 text-sm">
                   <Clock3 className="mr-1 h-3.5 w-3.5" />
                   {formatTime(secondsLeft)}
                 </Badge>
               )}
-              <Button variant="outline" size="sm" onClick={onExit} disabled={isSubmittingExam}>
+              <Button variant="destructive" size="sm" onClick={onExit} disabled={isSubmittingExam}>
                 Exit Session
               </Button>
             </div>
           </div>
           <Progress
             value={(currentQuestionNumber / Math.max(batchState.totalQuestions, 1)) * 100}
-            className="mt-3 h-2"
+            className="mt-3 h-1"
           />
         </CardContent>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-[1.75fr_1fr]">
-        <Card className="border-borderColorPrimary bg-backgroundSecondary">
-          <CardHeader>
+        <Card className="border-borderColorPrimary bg-muted/80">
+          <CardHeader className="px-6 py-2">
             <CardTitle className="text-lg">Question {currentQuestionNumber}</CardTitle>
             <CardDescription>
-              Batch {currentPage} of {batchState.totalPages}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -552,9 +551,8 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="rounded-lg border border-borderColorPrimary bg-background px-4 py-3">
-                  <p className="text-xs text-muted-foreground">{currentQuestion.subjectName}</p>
-                  <p className="mt-1 text-sm leading-6">{currentQuestion.prompt}</p>
+                <div className="rounded-lg py-0">
+                  <p className="mt-1 text-base leading-6">{currentQuestion.prompt}</p>
                 </div>
 
                 {currentQuestion.kind === "mcq" ? (
@@ -584,7 +582,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                     value={answers[currentQuestion.id] ?? ""}
                     onChange={(event) => setAnswer(currentQuestion.id, event.target.value)}
                     placeholder="Type your answer here..."
-                    className="min-h-[120px]"
+                    className="min-h-[120px] focus-visible:outline-none border border-borderColorPrimary"
                   />
                 )}
 
@@ -612,15 +610,14 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
 
             <div className="mt-6 flex items-center justify-between">
               <Button
-                variant="outline"
                 onClick={handlePrevious}
                 disabled={currentQuestionNumber === 1 || isWaitingForBatch || isSubmittingExam}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Previous
+                Back
               </Button>
               <Button onClick={handleNext} disabled={isWaitingForBatch || isSubmittingExam}>
-                {currentQuestionNumber >= batchState.totalQuestions ? "Submit Test" : "Next Question"}
+                {currentQuestionNumber >= batchState.totalQuestions ? "Submit Test" : "Next"}
                 {currentQuestionNumber >= batchState.totalQuestions ? (
                   <CheckCircle2 className="ml-2 h-4 w-4" />
                 ) : (
@@ -633,7 +630,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
 
         <Card className="border-borderColorPrimary bg-backgroundSecondary">
           <CardHeader>
-            <CardTitle className="text-lg">Progress</CardTitle>
+            <CardTitle className="text-lg"></CardTitle>
             <CardDescription>
               {answeredCount} answered of {batchState.totalQuestions}
             </CardDescription>
@@ -653,9 +650,9 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                     onClick={() => jumpToQuestion(questionNumber)}
                     disabled={!loaded || isWaitingForBatch || isSubmittingExam}
                     className={cn(
-                      "h-8 rounded-md border text-xs font-medium",
-                      active && "border-primary bg-secondary",
-                      answered && !active && "border-primary/60",
+                      "h-8 rounded-md border border-borderColorPrimary text-xs font-medium",
+                      active && "border-primary bg-sideBarBackground",
+                      answered && !active && "border-none bg-green-500/30",
                       !loaded && "cursor-not-allowed border-dashed text-muted-foreground"
                     )}
                   >
@@ -666,13 +663,13 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
             </div>
 
             {batchState.isGenerating ? (
-              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
+              <div className="rounded-lg italic text-xs text-muted-foreground mt-4">
                 <ArrowRight className="mr-1 inline h-3.5 w-3.5" />
-                Remaining batches are generating in the background and are prefetched automatically.
+                Loading questions.
               </div>
             ) : (
-              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
-                you can jump to any question by clicking on the question number in the progress grid.
+              <div className="rounded-lg italic text-xs text-muted-foreground mt-4">
+                you can jump to any question by clicking on the question number.
               </div>
             )}
           </CardContent>
