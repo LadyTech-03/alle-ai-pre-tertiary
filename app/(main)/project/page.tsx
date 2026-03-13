@@ -174,11 +174,11 @@ export default function ProjectsPage() {
   }, [setHistory, setHistoryLoading]);
 
   // Redirect if current project exists
-  useEffect(() => {
-    if (currentProject && !isInitialLoading) {
-      router.push(`/project/${currentProject.uuid}`);
-    }
-  }, [currentProject, router, isInitialLoading]);
+  // useEffect(() => {
+  //   if (currentProject && !isInitialLoading) {
+  //     router.push(`/project/${currentProject.uuid}`);
+  //   }
+  // }, [currentProject, router, isInitialLoading]);
 
   const handleProjectClick = (project: typeof projects[0]) => {
     setCurrentProject(project);
