@@ -122,7 +122,7 @@ export default function AuthLayout({
               height={70}
               className=""
             />
-            <span className="text-2xl font-bold uppercase">{user.first_name}</span>
+            <span className="text-2xl font-bold uppercase">{user?.first_name}</span>
           </div>
         </div>
 

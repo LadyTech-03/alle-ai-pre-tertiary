@@ -11,7 +11,7 @@ export interface StartSessionResponse {
     device_session: string;
     session_user: {
         name: string;
-        class_group: string;
+        class_group_name: string;
     };
     message: string;
 }

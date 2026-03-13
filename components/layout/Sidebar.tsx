@@ -25,7 +25,7 @@ import { HiOutlinePencilAlt } from "react-icons/hi";
 import {
   sidebarMenuItems,
 } from "@/lib/constants";
-import { useSidebarStore, useHistoryStore, useProjectStore, Project, useAuthStore, useWebSearchStore, useCombinedModeStore, useStreamingTitlesStore, useCompareModeStore } from "@/stores";
+import { useSidebarStore, useHistoryStore, useProjectStore, Project, useAuthStore, useWebSearchStore, useCombinedModeStore, useStreamingTitlesStore, useCompareModeStore, useOrgSessionStore } from "@/stores";
 import {
   Tooltip,
   TooltipContent,
@@ -99,7 +99,7 @@ export function Sidebar() {
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const { user, plan } = useAuthStore();
   const { setGenerationType, conversationId, clearConversation, setConversationId } = useConversationStore();
-  ;
+  const sessionUser = useOrgSessionStore((state) => state.sessionUser);
 
   // Add confirmation dialog state
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
@@ -713,7 +713,7 @@ export function Sidebar() {
                 <>
                   <div className="flex-shrink-0 px-2">
                     <div className="flex flex-col gap-2 items-start mx-2 text-sm font-medium text-muted-foreground mb-2">
-                      <span>CLASS: BASIC 7 (JHS 1)</span>
+                      <span className="uppercase">{sessionUser?.class_group_name}</span>
                       <span>Subjects</span>
                     </div>
                   </div>
@@ -774,7 +774,7 @@ export function Sidebar() {
                                             <span className="text-xs font-bold truncate text-foreground group-hover:text-foreground">
                                               <TextStream
                                                 text={project.name}
-                                                className="truncate"
+                                                className="truncate overflow-hidden text-ellipsis"
                                                 isStreaming={streamingTitles[`project-${project.uuid}`] || false}
                                                 streamDuration={800}
                                               />
@@ -1356,12 +1356,12 @@ export function Sidebar() {
                           {/* <div className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-green-500 ring-1 ring-backgroundSecondary"></div> */}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-sm text-foreground truncate">{user?.first_name}</span>
+                          <span className="font-semibold text-sm text-foreground truncate">{sessionUser?.name}</span>
                           <span
                             className="text-xs text-muted-foreground font-bold rounded-md"
                           >
                             {/* {plan ? plan.split('_')[0].charAt(0).toUpperCase() + plan.split('_')[0].slice(1) : <Loader className="h-3 w-3 animate-spin" />} */}
-                            ALLE-AI EDU
+                            STUDENT
                           </span>
                         </div>
                       </div>

@@ -1400,8 +1400,8 @@ export const useTutorialStore = create<TutorialStore>()(
 interface OrgSessionStore {
   deviceSessionId: string | null;
   setDeviceSessionId: (id: string | null) => void;
-  sessionUser: { name: string; class_group: string } | null;
-  setSessionUser: (user: { name: string; class_group: string } | null) => void;
+  sessionUser: { name: string; class_group_name: string } | null;
+  setSessionUser: (user: { name: string; class_group_name: string } | null) => void;
   orgId: string | null;
   setOrgId: (id: string | null) => void;
   clearSession: () => void;
