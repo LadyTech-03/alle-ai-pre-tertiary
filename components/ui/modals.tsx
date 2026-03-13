@@ -565,14 +565,16 @@ export function LogoutModal({ isOpen, onClose, mode = 'edu-device', deviceInfo }
   const orgId = useOrgSessionStore((state) => state.orgId);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const clearSession = useOrgSessionStore((state) => state.clearSession);
   
 
   const handleEndSession = async () => {
     try{
         const response = await orgDeviceApi.endSession(orgId!);
         if (response.success){
-            router.push('/');
-            toast.success(response.message || 'Session ended successfully');
+          clearSession();
+          router.push('/');
+          toast.success(response.message || 'Session ended successfully');
         }
     } catch (error: any) {
         // toast.error(error.message || 'Failed to end session');
