@@ -83,8 +83,8 @@ export function SessionForm() {
                     setClassOptions(options);
                 }
             } catch (error) {
-                console.error("Failed to fetch class groups:", error);
-                toast.error("Failed to load class options");
+                // console.error("Failed to fetch class groups:", error);
+                // toast.error("Failed to load class options");
             } finally {
                 setIsClassesLoading(false);
             }

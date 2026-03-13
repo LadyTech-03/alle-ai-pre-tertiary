@@ -14,7 +14,7 @@ import { usePendingChatStateStore } from '@/stores';
 import { sendGAEvent } from '@next/third-parties/google'
 
 
-type AuthMode = 'login' | 'create-session';
+type AuthMode = 'create-session';
 
 // Heading texts moved outside component to avoid useEffect dependency warning
 const headingTexts = [
@@ -26,7 +26,7 @@ const headingTexts = [
 
 // Create an inner component for the auth page logic
 function AuthPageInner() {
-  const [authMode, setAuthMode] = useState<AuthMode>('create-session');
+  const [authMode, setAuthMode] = useState<AuthMode>();
   const [mounted, setMounted] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [displayText, setDisplayText] = useState("");
@@ -71,15 +71,15 @@ function AuthPageInner() {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode') as AuthMode | null;
 
-    if (mode && ['login', 'create-session'].includes(mode)) {
+    if (mode && ['create-session'].includes(mode)) {
       setAuthMode(mode);
     }
   }, []);
 
   const renderAuthContent = () => {
     switch (authMode) {
-      case 'login':
-        return <LoginForm />;
+      // case 'login':
+      //   return <LoginForm />;
       case 'create-session':
         return <SessionForm />;
     }
