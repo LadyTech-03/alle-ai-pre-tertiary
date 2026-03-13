@@ -5,6 +5,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -85,6 +93,8 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   const [secondsLeft, setSecondsLeft] = useState<number | null>(request.time_limit);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [reviewQuestions, setReviewQuestions] = useState<GeneratedExamQuestion[]>([]);
+  const [isExitPromptOpen, setIsExitPromptOpen] = useState(false);
+  const [isSubmitPromptOpen, setIsSubmitPromptOpen] = useState(false);
 
   const currentPage = Math.ceil(currentQuestionNumber / batchState.pageSize);
   const currentIndexInPage = (currentQuestionNumber - 1) % batchState.pageSize;
@@ -333,7 +343,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     }
 
     if (currentQuestionNumber >= batchState.totalQuestions) {
-      await submitExam("manual");
+      setIsSubmitPromptOpen(true);
       return;
     }
 
@@ -416,7 +426,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
 
             <Button onClick={onExit} className="w-full">
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              Back to Setup
+              Back to Exam/Test Prep Menu
             </Button>
           </CardContent>
         </Card>
@@ -504,8 +514,8 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="mt-2 text-lg font-semibold">{request.title} - ({currentQuestion.subjectName})</h2>
-              <p className="text-xs text-muted-foreground">
-                Question {currentQuestionNumber} of {batchState.totalQuestions}
+              <p className="text-base text-muted-foreground font-semibold">
+                Question {currentQuestionNumber}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -515,22 +525,27 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                   {formatTime(secondsLeft)}
                 </Badge>
               )}
-              <Button variant="destructive" size="sm" onClick={onExit} disabled={isSubmittingExam}>
-                Exit Session
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsExitPromptOpen(true)}
+                disabled={isSubmittingExam}
+              >
+                End Test
               </Button>
             </div>
           </div>
-          <Progress
+          {/* <Progress
             value={(currentQuestionNumber / Math.max(batchState.totalQuestions, 1)) * 100}
             className="mt-3 h-1"
-          />
+          /> */}
         </CardContent>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-[1.75fr_1fr]">
         <Card className="border-borderColorPrimary bg-muted/80">
           <CardHeader className="px-6 py-2">
-            <CardTitle className="text-lg">Question {currentQuestionNumber}</CardTitle>
+            <CardTitle className="text-lg sr-only">Question {currentQuestionNumber}</CardTitle>
             <CardDescription>
             </CardDescription>
           </CardHeader>
@@ -560,20 +575,17 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                     {currentQuestion.options.map((option) => {
                       const selected = answers[currentQuestion.id] === option.id;
                       return (
-                        <button
+                        <Button
                           key={option.id}
-                          type="button"
+                          variant={selected ? 'success2' : 'outline2'}
                           onClick={() => setAnswer(currentQuestion.id, option.id)}
                           className={cn(
-                            "w-full rounded-lg border px-3 py-2 text-left",
-                            selected
-                              ? "border-primary bg-secondary"
-                              : "border-borderColorPrimary bg-background"
+                            "w-full justify-start"
                           )}
                         >
                           <span className="mr-2 font-semibold">{option.id}.</span>
                           <span className="text-sm">{option.text}</span>
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>
@@ -589,7 +601,6 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 {request.hints_count && request.hints_count > 0 && currentQuestion.hint ? (
                   <div className="space-y-2">
                     <Button
-                      type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => toggleHint(currentQuestion.id)}
@@ -616,7 +627,9 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
-              <Button onClick={handleNext} disabled={isWaitingForBatch || isSubmittingExam}>
+              <Button 
+              variant={currentQuestionNumber >= batchState.totalQuestions ? "success2" : "default"}
+              onClick={handleNext} disabled={isWaitingForBatch || isSubmittingExam}>
                 {currentQuestionNumber >= batchState.totalQuestions ? "Submit Test" : "Next"}
                 {currentQuestionNumber >= batchState.totalQuestions ? (
                   <CheckCircle2 className="ml-2 h-4 w-4" />
@@ -644,20 +657,19 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 const active = questionNumber === currentQuestionNumber;
 
                 return (
-                  <button
+                  <Button
                     key={questionNumber}
-                    type="button"
+                    variant={active ? 'default' : 'outline2'}
                     onClick={() => jumpToQuestion(questionNumber)}
                     disabled={!loaded || isWaitingForBatch || isSubmittingExam}
                     className={cn(
-                      "h-8 rounded-md border border-borderColorPrimary text-xs font-medium",
-                      active && "border-primary bg-sideBarBackground",
+                      "rounded-md border-2 border-borderColorPrimary text-xs font-medium",
                       answered && !active && "border-none bg-green-500/30",
                       !loaded && "cursor-not-allowed border-dashed text-muted-foreground"
                     )}
                   >
                     {loaded ? questionNumber : "..."}
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -675,6 +687,70 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isExitPromptOpen} onOpenChange={setIsExitPromptOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>End Test?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to end the test? You can always start a new test, but your current progress will be lost.
+            </DialogDescription>
+          </DialogHeader>
+          {secondsLeft !== null ? (
+            <div className="rounded-lg border border-borderColorPrimary bg-muted/40 px-4 py-3 text-center">
+              <p className="text-xs text-muted-foreground">Time remaining</p>
+              <p className="text-2xl font-semibold">{formatTime(secondsLeft)}</p>
+            </div>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsExitPromptOpen(false)}>
+              Stay
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setIsExitPromptOpen(false);
+                onExit();
+              }}
+            >
+              End
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSubmitPromptOpen} onOpenChange={setIsSubmitPromptOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Submit Test?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to submit the test? This will finalize your answers and you won&apos;t be able to make any changes.
+            </DialogDescription>
+          </DialogHeader>
+          {secondsLeft !== null ? (
+            <div className="rounded-lg border border-borderColorPrimary bg-muted/40 px-4 py-3 text-center">
+              <p className="text-xs text-muted-foreground">Time remaining</p>
+              <p className="text-2xl font-semibold">{formatTime(secondsLeft)}</p>
+            </div>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsSubmitPromptOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="success2"
+              onClick={() => {
+                setIsSubmitPromptOpen(false);
+                void submitExam("manual");
+              }}
+              disabled={isSubmittingExam}
+            >
+              Submit Test
+              <CheckCircle2 className="ml-2 h-4 w-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

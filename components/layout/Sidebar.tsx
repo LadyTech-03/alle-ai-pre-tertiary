@@ -17,7 +17,7 @@ import {
   ContextMenuSeparator
 } from "@/components/ui/context-menu";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { LayoutGrid, Plus, EllipsisVertical, Gem, ChevronDown, BookOpen, Pencil, Trash2, History, Search, ChartLine, ImageIcon, Music, Video, Loader, Share, Undo2, ChevronRight, Check, X, Settings, BadgeQuestionMark, BadgeInfo, Book, LogOut, Keyboard, GraduationCap } from "lucide-react";
+import { LayoutGrid, Plus, EllipsisVertical, Gem, ChevronDown, BookOpen, Pencil, Trash2, History, Search, ChartLine, ImageIcon, Music, Video, Loader, Share, Undo2, ChevronRight, Check, X, Settings, BadgeQuestionMark, BadgeInfo, Book, LogOut, Keyboard, GraduationCap, BookOpenText } from "lucide-react";
 import { BsFolder2Open } from "react-icons/bs";
 import { ShortcutsModal } from "../ui/modals";
 import Image from "next/image";
@@ -84,6 +84,7 @@ export function Sidebar() {
   const router = useRouter();
   const isExamPrepPage = pathname === "/exam-prep";
   const isSubjectsPage = pathname === "/project";
+  const isLessonNotePage = pathname === "/lesson-notes"
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { history, removeHistory: removeItem, renameHistory: renameItem, getHistoryByType, isLoading, addHistory } = useHistoryStore();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -255,7 +256,13 @@ export function Sidebar() {
     router.push("/exam-prep");
   };
 
+  const handleLessonNotes = () => {
+    document.title = "Lesson Notes - Alle-AI";
+    router.push("/lesson-notes")
+  }
+
   const handleSubjects = () => {
+    document.title = "Subjects - Alle-AI";
     router.push("/project");
   };
 
@@ -658,6 +665,22 @@ export function Sidebar() {
                 >
                   <GraduationCap className="mr-2 h-4 w-4" />
                   EXAM PREP
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleLessonNotes();
+                    (isMobile && isOpen) ? toggle() : '';
+                  }}
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start",
+                    isLessonNotePage
+                      ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20"
+                      : "border-borderColorPrimary bg-background text-foreground hover:bg-secondary/70"
+                  )}
+                >
+                  <BookOpenText className="mr-2 h-4 w-4" />
+                  LESSON NOTES
                 </Button>
                 <Button
                   onClick={() => {

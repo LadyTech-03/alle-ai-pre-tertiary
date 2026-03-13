@@ -490,9 +490,6 @@ export function StudentFlashcardsSession({
       <div className="space-y-4">
         <Card className="border-borderColorPrimary bg-backgroundSecondary">
           <CardHeader>
-            <Badge variant="secondary" className="w-fit px-2 py-0.5 text-[10px]">
-              FLASHCARD SUMMARY
-            </Badge>
             <CardTitle className="mt-2 text-xl">Session Complete</CardTitle>
             <CardDescription>
               {summary.levelAfter > summary.levelBefore ? "Memory Level Increased!" : "Nice work. Keep going."}
@@ -501,20 +498,12 @@ export function StudentFlashcardsSession({
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                <p className="text-xs text-muted-foreground">XP</p>
-                <p className="text-lg font-semibold">{summary.xpEarned}</p>
-              </div>
-              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
                 <p className="text-xs text-muted-foreground">Accuracy</p>
                 <p className="text-lg font-semibold">{summary.accuracy}%</p>
               </div>
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
                 <p className="text-xs text-muted-foreground">Best Streak</p>
                 <p className="text-lg font-semibold">{summary.bestStreak}</p>
-              </div>
-              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                <p className="text-xs text-muted-foreground">Retention</p>
-                <p className="text-lg font-semibold">{summary.retention}%</p>
               </div>
             </div>
 
@@ -537,15 +526,15 @@ export function StudentFlashcardsSession({
 
             <Button className="w-full" onClick={onExit}>
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              Back to Setup
+              Back to Exam/Test Prep Menu
             </Button>
           </CardContent>
         </Card>
 
         <Card className="border-borderColorPrimary bg-backgroundSecondary">
           <CardHeader>
-            <CardTitle className="text-lg">Read-only Review</CardTitle>
-            <CardDescription>Ratings and explanations after submission.</CardDescription>
+            <CardTitle className="text-lg sr-only">Results</CardTitle>
+            <CardDescription></CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {reviewQuestions.map((question) => (
@@ -577,29 +566,20 @@ export function StudentFlashcardsSession({
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="text-2xl">{request.title} Flashcards</CardTitle>
-              <CardDescription className="mt-1">Exam code: {request.id}</CardDescription>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">
-                {Math.min(currentTurn + 1, deckQueue.length)}/{deckQueue.length}
-              </p>
+              <CardTitle className="text-2xl">{request.title}</CardTitle>
+              <CardDescription className="mt-1 font-semibold">Subject: {currentQuestion?.subjectName}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">{EMOJI_STILL_LEARNING} Still learning</p>
-              <p className="text-lg font-semibold">{stillLearningCount + retryCount}</p>
-            </div>
-            <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">{EMOJI_KNOW} Know</p>
-              <p className="text-lg font-semibold">{knownCount}</p>
-            </div>
+          <div>
+            <span className="text-xs text-muted-foreground">Progress</span>
+            <Progress value={deckProgress} className="h-1.5" />
           </div>
-          <Progress value={deckProgress} className="h-1.5" />
-          <Progress value={levelProgress.percent} className="h-1.5" indicatorClassName="bg-emerald-500" />
+          <div>
+            <span className="text-xs text-muted-foreground">Streak</span>
+            <Progress value={levelProgress.percent} className="h-1.5" indicatorClassName="bg-emerald-500" />
+          </div>
         </CardContent>
       </Card>
 
@@ -636,7 +616,6 @@ export function StudentFlashcardsSession({
                   <div className="absolute inset-0 flex h-full flex-col rounded-xl p-6 [backface-visibility:hidden]">
                     <div className="mb-4 flex items-center justify-between border-b border-borderColorPrimary pb-3">
                       <p className="text-sm font-medium">Front</p>
-                      <p className="text-sm text-muted-foreground">{currentQuestion.subjectName}</p>
                     </div>
 
                     <div className="flex flex-1 items-center justify-center">
@@ -653,7 +632,6 @@ export function StudentFlashcardsSession({
                   <div className="absolute inset-0 flex h-full flex-col rounded-xl p-6 [transform:rotateY(180deg)] [backface-visibility:hidden]">
                     <div className="mb-4 flex items-center justify-between border-b border-borderColorPrimary pb-3">
                       <p className="text-sm font-medium">Back</p>
-                      <p className="text-sm text-muted-foreground">{currentQuestion.subjectName}</p>
                     </div>
 
                     <div className="flex flex-1 items-center justify-center">
@@ -702,7 +680,7 @@ export function StudentFlashcardsSession({
                   disabled={!isFlipped}
                   onClick={() => applyAction("retry")}
                 >
-                  {EMOJI_RETRY} Again/Retry
+                  {EMOJI_RETRY} Retry
                 </Button>
                 <Button
                   type="button"
@@ -730,15 +708,11 @@ export function StudentFlashcardsSession({
       <Card className="border-borderColorPrimary bg-backgroundSecondary">
         <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-xs text-muted-foreground">
           <div className="flex flex-wrap items-center gap-3">
-            <span>XP: {sessionXp}</span>
             <span>Best streak: {bestStreak}</span>
-            <span>Due for review: {dueForReview}</span>
-            <span>Retention: {retention}%</span>
-            <span>{secondsLeft === null ? "Untimed" : `Timer: ${formatTime(secondsLeft)}`}</span>
-            {lastXpGain > 0 ? <span className="text-emerald-500">+{lastXpGain} XP</span> : null}
+            <span>{secondsLeft === null ? "Not Timed" : `Timer: ${formatTime(secondsLeft)}`}</span>
           </div>
-          <Button type="button" variant="outline" onClick={() => void finishSession()}>
-            Finish Session
+          <Button variant="destructive" onClick={() => void finishSession()}>
+            End Test
           </Button>
         </CardContent>
       </Card>

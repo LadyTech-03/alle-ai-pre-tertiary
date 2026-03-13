@@ -182,7 +182,7 @@ const focusLabels: Record<(typeof focusValues)[number], string> = {
 
 const formatSessionDuration = (seconds: number | null) => {
   if (seconds === null) {
-    return "Untimed";
+    return "No limit";
   }
   const totalMinutes = Math.max(1, Math.floor(seconds / 60));
   return `${totalMinutes} minutes`;
@@ -268,9 +268,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
       });
 
       setIsInstructionsOpen(true);
-      toast.success("Questions are ready", {
-        description: "Review instructions, then begin the session.",
-      });
     } catch {
       toast.error("Failed to start practice. Try again.");
     } finally {
@@ -599,8 +596,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
                   <p className="font-medium text-foreground">Flashcard Flow</p>
                   <p className="mt-1">Click card to flip between front and back.</p>
-                  <p>Use simple actions: ↩️ Again, 🤓 I know this, 📚 Still learning.</p>
-                  <p>Progress updates as you go; review remains read-only after finish.</p>
+                  <p>Progress updates as you go; results is displayed at the end of the test</p>
                 </div>
               )}
 
@@ -640,7 +636,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleInstructionModalChange(false)}>
-              Back to Setup
+              Cancel
             </Button>
             <Button type="button" onClick={handleBeginExam} disabled={!pendingSession}>
               Begin
