@@ -559,7 +559,7 @@ export function TextSizeModal({ isOpen, onClose }: ModalProps) {
   );
 }
 
-export function LogoutModal({ isOpen, onClose, mode = 'current', deviceInfo }: LogoutModalProps) {
+export function LogoutModal({ isOpen, onClose, mode = 'edu-device', deviceInfo }: LogoutModalProps) {
 
   const { logout } = useAuth();
   const orgId = useOrgSessionStore((state) => state.orgId);
