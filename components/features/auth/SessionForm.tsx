@@ -28,7 +28,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { orgDeviceApi } from "@/lib/api/orgDevice";
 import { toast } from "sonner";
-import { useOrgSessionStore } from "@/stores";
+import { useAuthStore, useOrgSessionStore } from "@/stores";
 
 // Zod schema for session validation
 const sessionSchema = z.object({
@@ -55,6 +55,8 @@ export function SessionForm() {
     const [classOptions, setClassOptions] = useState<Option[]>([]);
     const router = useRouter();
     const orgId = useOrgSessionStore((state) => state.orgId);
+    const { user, plan } = useAuthStore();
+    
 
     const form = useForm<SessionFormData>({
         resolver: zodResolver(sessionSchema),

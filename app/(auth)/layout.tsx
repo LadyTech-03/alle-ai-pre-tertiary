@@ -24,7 +24,7 @@ export default function AuthLayout({
 }) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const router = useRouter();
-  const { token, setAuth, clearAuth } = useAuthStore();
+  const { token, setAuth, clearAuth, user } = useAuthStore();
   const [authState, setAuthState] = useState<
     "checking" | "show-auth" | "redirect"
   >("checking");
@@ -122,7 +122,7 @@ export default function AuthLayout({
               height={70}
               className=""
             />
-            <span className="text-2xl font-bold">GH SCHOOL</span>
+            <span className="text-2xl font-bold uppercase">{user.first_name}</span>
           </div>
         </div>
 
@@ -132,20 +132,6 @@ export default function AuthLayout({
           <p className="text-lg text-muted-foreground">
            Educational licensing for universities and academic institutions that need reliable AI
           </p>
-          <div className="space-y-3 pt-4">
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <span className="text-sm">Full access to all AI models, tools, and features for students and faculty.</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <span className="text-sm">Curriculum aligned with national standards</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <span className="text-sm">Reduce AI hallucinations</span>
-            </div>
-          </div>
         </div>
       </div>
 
