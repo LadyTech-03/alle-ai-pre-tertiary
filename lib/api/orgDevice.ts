@@ -2,7 +2,7 @@ import api from './axios';
 
 export interface StartSessionParams {
     name: string;
-    class: string;
+    class_group: string;
 }
 
 export interface StartSessionResponse {
