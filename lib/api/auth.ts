@@ -181,7 +181,9 @@ export const authApi = {
   },
 
   exchangeCode: async (code: string, orgId: string): Promise<LoginResponse> => {
-    const response = await api.post(`/organisations/${orgId}/code-exchange`, { code });
+    const response = await api.post(`/organisations/${orgId}/code-exchange`, { 
+      exchange_token: code 
+    });
     return response.data;
   },
 

@@ -84,7 +84,7 @@ export function Sidebar() {
   const router = useRouter();
   const isExamPrepPage = pathname === "/exam-prep";
   const isSubjectsPage = pathname === "/project";
-  const isLessonNotePage = pathname === "/lesson-notes"
+  const isLessonNotePage = pathname === "/lesson-notes";
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { history, removeHistory: removeItem, renameHistory: renameItem, getHistoryByType, isLoading, addHistory } = useHistoryStore();
   const [editingId, setEditingId] = useState<string | null>(null);

@@ -44,7 +44,6 @@ export default function AuthLayout({
       if (exchange_token && orgId) {
         try {
           const response = await authApi.exchangeCode(exchange_token, orgId);
-          console.log(response, 'What I`ve done');
           // return
           if (response.status && response.data.token) {
             setAuth(response.data.user, response.data.token, response.data.plan);
