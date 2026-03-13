@@ -1329,7 +1329,10 @@ export function Sidebar() {
             </div>
 
             <div className="px-2 pb-3">
-              <Button variant={'destructive'} className="w-full flex items-center justify-start">
+              <Button 
+              onClick={() => setIsLogoutModalOpen(true)}
+              variant={'destructive'} 
+              className="w-full flex items-center justify-start">
                 <LogOut className="mr-3 h-4 w-4" />
                 End Session
               </Button>

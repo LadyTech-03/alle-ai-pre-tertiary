@@ -139,26 +139,7 @@ import { toast } from 'sonner';
 import { NotificationItem } from "@/lib/types";
 import { driveService } from '@/lib/services/driveServices';
 import { useRouter } from "next/navigation";
-import { Share } from "next/dist/compiled/@next/font/dist/google";
-import { DataTable } from "./txn/data-table";
-import { columns } from "./txn/columns";
-import { StatCard } from "./stat-card";
-import Cleave from 'cleave.js/react';
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as ChartTooltip,
-  Legend,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label, Label as UILabel } from "@/components/ui/label";
 import { useAuth } from "../providers/AuthProvider";
@@ -196,6 +177,9 @@ import { CardElement, useStripe, useElements, CardNumberElement, CardExpiryEleme
 import { useAutoReloadStore } from "@/stores";
 import { useAudioCategorySelectionStore } from "@/stores/audioCategorySelectionStore";
 import { likedApi } from "@/lib/api/liked";
+
+import { useOrgSessionStore } from "@/stores";
+import { orgDeviceApi } from "@/lib/api/orgDevice";
 
 
 interface ModalProps {
@@ -257,7 +241,7 @@ interface ShortcutItem {
 }
 
 interface LogoutModalProps extends ModalProps {
-  mode?: 'current' | 'device';
+  mode?: 'current' | 'device' | 'edu-device';
   deviceInfo?: {
     id: string | number;
     name: string;
@@ -577,8 +561,23 @@ export function TextSizeModal({ isOpen, onClose }: ModalProps) {
 
 export function LogoutModal({ isOpen, onClose, mode = 'current', deviceInfo }: LogoutModalProps) {
 
-   const { logout } = useAuth();
+  const { logout } = useAuth();
+  const orgId = useOrgSessionStore((state) => state.orgId);
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  
+
+  const handleEndSession = async () => {
+    try{
+        const response = await orgDeviceApi.endSession(orgId!);
+        if (response.success){
+            router.push('/');
+            toast.success(response.message || 'Session ended successfully');
+        }
+    } catch (error: any) {
+        // toast.error(error.message || 'Failed to end session');
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -592,9 +591,9 @@ export function LogoutModal({ isOpen, onClose, mode = 'current', deviceInfo }: L
     }
   };
 
-  const title = mode === 'current' ? 'End Session' : `Logout Device`;
-  const description = mode === 'current' 
-    ? "This will end the session on your current session. Once ended you won't be able to access your conversations again."
+  const title = mode === 'edu-device' ? 'End Session' : `Logout Device`;
+  const description = mode === 'edu-device' 
+    ? "This will end your current session. Once ended you won't be able to access your conversations again."
     : `This will end the session on your ${deviceInfo?.name}. Any ongoing operations on that device will be interrupted.`;
 
   return (
@@ -637,15 +636,15 @@ export function LogoutModal({ isOpen, onClose, mode = 'current', deviceInfo }: L
             <Button
               variant="destructive"
               onClick={() => {
-                if (mode === 'current') {
-                  handleLogout();
+                if (mode === 'edu-device') {
+                  handleEndSession();
                 } else if (deviceInfo) {
                   // console.log(`Logging out device: ${deviceInfo.id}`);
                 }
                 onClose();
               }}
             >
-              {mode === 'current' ? 'Logout' : 'Logout Device'}
+              {mode === 'edu-device' ? 'End Session' : 'Logout Device'}
             </Button>
           </div>
         </div>

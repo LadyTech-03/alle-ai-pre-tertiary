@@ -16,6 +16,11 @@ export interface StartSessionResponse {
     message: string;
 }
 
+export interface EndSessionResponse {
+    success: boolean;
+    message: string;
+}
+
 // Define the shape of a class group
 export interface ClassGroup {
     name: string;
@@ -36,6 +41,16 @@ export const orgDeviceApi = {
             return response.data;
         } catch (error) {
             console.error('Error starting device session:', error);
+            throw error;
+        }
+    },
+
+    endSession: async (orgId: string | number): Promise<EndSessionResponse> => {
+        try {
+            const response = await api.post<EndSessionResponse>(`/organisations/${orgId}/end-device-session`);
+            return response.data;
+        } catch (error) {
+            console.error('Error ending device session:', error);
             throw error;
         }
     },
