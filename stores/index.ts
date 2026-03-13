@@ -1416,7 +1416,7 @@ export const useOrgSessionStore = create<OrgSessionStore>()(
       setDeviceSessionId: (id) => set({ deviceSessionId: id }),
       setSessionUser: (user) => set({ sessionUser: user }),
       setOrgId: (id) => set({ orgId: id }),
-      clearSession: () => set({ deviceSessionId: null, sessionUser: null, orgId: null }),
+      clearSession: () => set({ deviceSessionId: null, sessionUser: null}),
     }),
     {
       name: 'org-session-storage',

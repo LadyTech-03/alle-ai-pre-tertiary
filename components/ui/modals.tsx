@@ -573,7 +573,7 @@ export function LogoutModal({ isOpen, onClose, mode = 'edu-device', deviceInfo }
         const response = await orgDeviceApi.endSession(orgId!);
         if (response.success){
           clearSession();
-          router.push('/');
+          router.push(`/auth?org_id=${orgId}`);
           toast.success(response.message || 'Session ended successfully');
         }
     } catch (error: any) {
