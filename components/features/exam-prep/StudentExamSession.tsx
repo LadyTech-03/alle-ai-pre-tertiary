@@ -466,6 +466,9 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
       return;
     }
 
+    console.log('current question:', currentQuestion);
+
+
     void persistAnswerForQuestion(currentQuestion);
 
     if (isQuestionLoaded(questionNumber)) {
