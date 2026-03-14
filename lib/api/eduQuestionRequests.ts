@@ -70,7 +70,7 @@ export interface CreateQuestionRequestPayload {
   courseUuid: string;
   number: number;
   type: QuestionRequestType;
-  hintLimit: number;
+  hintLimit: number | null;
   timeLimitSeconds: number | null;
   allowsExplanation: boolean;
   courseFiles?: string[] | null;
@@ -107,6 +107,7 @@ export interface GeneratedQuestionOption {
 
 export interface GeneratedExamQuestion {
   id: string;
+  questionId?: string | number;
   order: number;
   kind: GeneratedQuestionKind;
   prompt: string;
@@ -143,6 +144,8 @@ export interface GetQuestionBatchParams {
 }
 
 interface EduGeneratedQuestionItem {
+  id?: number | string;
+  question_id?: number | string;
   edu_question_request_id: number;
   question: string;
   options: string[];
@@ -154,6 +157,24 @@ interface EduGeneratedQuestionItem {
 
 interface EduGeneratedQuestionResponse {
   data: EduGeneratedQuestionItem[];
+}
+
+export interface SaveQuestionAnswerPayload {
+  organisationId: number | string;
+  requestId: number | string;
+  questionId: number | string;
+  answer: string | null;
+  endUserType?: EndUserType;
+  useMock?: boolean;
+}
+
+export interface RequestQuestionHintPayload {
+  organisationId: number | string;
+  requestId: number | string;
+  questionId: number | string;
+  answer: string | null;
+  endUserType?: EndUserType;
+  useMock?: boolean;
 }
 
 export interface CreateMockQuestionSessionPayload {
@@ -338,6 +359,7 @@ const buildGeneratedQuestions = (payload: CreateMockQuestionSessionPayload): Gen
 
     return {
       id: `${subject.id}-q-${order}`,
+      questionId: `${subject.id}-q-${order}`,
       order,
       kind,
       prompt: generatePrompt(payload.type, order, subject.name, payload.difficulty || 'medium'),
@@ -393,9 +415,11 @@ const normalizeGeneratedQuestions = (
       parseOptionLabel(option, optionIndex)
     );
     const normalizedAnswer = item.answer?.trim()?.[0]?.toUpperCase() ?? null;
+    const externalQuestionId = item.id ?? item.question_id ?? `${requestId}-${index + 1}`;
 
     return {
-      id: `${requestId}-${index + 1}`,
+      id: String(externalQuestionId),
+      questionId: externalQuestionId,
       order: index + 1,
       kind: "mcq",
       prompt: item.question,
@@ -535,7 +559,7 @@ export const eduQuestionRequestsApi = {
         type: payload.type,
         timeLimitSeconds: payload.timeLimitSeconds,
         allowsExplanation: payload.allowsExplanation,
-        hintsCount: payload.hintLimit,
+        hintsCount: payload.hintLimit ?? 0,
         difficulty: "medium",
         additionalNote: payload.additionalNote ?? undefined,
         courseFiles: payload.courseFiles ?? undefined,
@@ -696,6 +720,69 @@ export const eduQuestionRequestsApi = {
       isGenerating: availableCount < resolvedTotalQuestions,
       data,
     };
+  },
+
+  saveQuestionAnswer: async ({
+    organisationId,
+    requestId,
+    questionId,
+    answer,
+    endUserType = "Student",
+    useMock,
+  }: SaveQuestionAnswerPayload): Promise<void> => {
+    const shouldUseMock = useMock ?? useMockByDefault();
+    if (shouldUseMock) {
+      await sleep(MOCK_DELAY_MS);
+      return;
+    }
+
+    await api.post(
+      `/organisations/${organisationId}/edu-question-attempt/${requestId}/answer`,
+      {
+        question_id: questionId,
+        answer,
+      },
+      {
+        headers: {
+          EndUserType: endUserType,
+        },
+      }
+    );
+  },
+
+  requestQuestionHint: async ({
+    organisationId,
+    requestId,
+    questionId,
+    answer,
+    endUserType = "Student",
+    useMock,
+  }: RequestQuestionHintPayload): Promise<string | null> => {
+    const shouldUseMock = useMock ?? useMockByDefault();
+    if (shouldUseMock) {
+      await sleep(MOCK_DELAY_MS);
+      return "Hint: review the most likely option based on the prompt.";
+    }
+
+    const response = await api.post<Record<string, any>>(
+      `/organisations/${organisationId}/edu-question-attempt/${requestId}/hint`,
+      {
+        question_id: questionId,
+        answer,
+      },
+      {
+        headers: {
+          EndUserType: endUserType,
+        },
+      }
+    );
+
+    return (
+      response.data?.hint ??
+      response.data?.data?.hint ??
+      response.data?.message ??
+      null
+    );
   },
 
   resetMockQuestionRequests: () => {

@@ -88,6 +88,9 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
+  const [savedAnswers, setSavedAnswers] = useState<Record<string, string>>({});
+  const [savingAnswerById, setSavingAnswerById] = useState<Record<string, boolean>>({});
+  const [hintLoadingById, setHintLoadingById] = useState<Record<string, boolean>>({});
   const [isWaitingForBatch, setIsWaitingForBatch] = useState(false);
   const [isSubmittingExam, setIsSubmittingExam] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(request.time_limit);
@@ -142,6 +145,88 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
       [questionId]: !prev[questionId],
     }));
   }, []);
+
+  const persistAnswerForQuestion = useCallback(
+    async (question: GeneratedExamQuestion | null) => {
+      if (!question) {
+        return;
+      }
+
+      const answer = answers[question.id];
+      if (!answer) {
+        return;
+      }
+
+      if (savedAnswers[question.id] === answer || savingAnswerById[question.id]) {
+        return;
+      }
+
+      setSavingAnswerById((prev) => ({ ...prev, [question.id]: true }));
+
+      try {
+        const questionId = question.questionId ?? question.id;
+        await eduQuestionRequestsApi.saveQuestionAnswer({
+          organisationId: request.organisation_id,
+          requestId: request.id,
+          questionId,
+          answer,
+          endUserType: "Student",
+          useMock: false,
+        });
+        setSavedAnswers((prev) => ({ ...prev, [question.id]: answer }));
+      } catch {
+        toast.error("Could not save that answer. We'll keep it locally.");
+      } finally {
+        setSavingAnswerById((prev) => ({ ...prev, [question.id]: false }));
+      }
+    },
+    [answers, request.id, request.organisation_id, savedAnswers, savingAnswerById]
+  );
+
+  const setQuestionHint = useCallback((questionId: string, hint: string) => {
+    setQuestionPages((prev) => {
+      const next: Record<number, GeneratedExamQuestion[]> = {};
+      Object.entries(prev).forEach(([pageKey, pageQuestions]) => {
+        next[Number(pageKey)] = pageQuestions.map((question) =>
+          question.id === questionId ? { ...question, hint } : question
+        );
+      });
+      return next;
+    });
+  }, []);
+
+  const requestHintForQuestion = useCallback(
+    async (question: GeneratedExamQuestion) => {
+      if (hintLoadingById[question.id]) {
+        return;
+      }
+
+      setHintLoadingById((prev) => ({ ...prev, [question.id]: true }));
+      try {
+        const questionId = question.questionId ?? question.id;
+        const hint = await eduQuestionRequestsApi.requestQuestionHint({
+          organisationId: request.organisation_id,
+          requestId: request.id,
+          questionId,
+          answer: answers[question.id] ?? null,
+          endUserType: "Student",
+          useMock: false,
+        });
+
+        if (hint) {
+          setQuestionHint(question.id, hint);
+          setRevealedHints((prev) => ({ ...prev, [question.id]: true }));
+        } else {
+          toast.error("No hint available yet.");
+        }
+      } catch {
+        toast.error("Could not load a hint. Try again.");
+      } finally {
+        setHintLoadingById((prev) => ({ ...prev, [question.id]: false }));
+      }
+    },
+    [answers, hintLoadingById, request.id, request.organisation_id, setQuestionHint]
+  );
 
   const loadPage = useCallback(
     async (page: number, waitUntilReady: boolean) => {
@@ -231,6 +316,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         return;
       }
 
+      void persistAnswerForQuestion(currentQuestion);
       setIsSubmittingExam(true);
 
       try {
@@ -340,6 +426,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     if (currentQuestionNumber <= 1 || isWaitingForBatch || isSubmittingExam) {
       return;
     }
+    void persistAnswerForQuestion(currentQuestion);
     setCurrentQuestionNumber((prev) => prev - 1);
   };
 
@@ -347,6 +434,8 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     if (isWaitingForBatch || isSubmittingExam) {
       return;
     }
+
+    void persistAnswerForQuestion(currentQuestion);
 
     if (currentQuestionNumber >= batchState.totalQuestions) {
       setIsSubmitPromptOpen(true);
@@ -376,6 +465,8 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     if (isWaitingForBatch || summary || isSubmittingExam) {
       return;
     }
+
+    void persistAnswerForQuestion(currentQuestion);
 
     if (isQuestionLoaded(questionNumber)) {
       setCurrentQuestionNumber(questionNumber);
@@ -604,17 +695,28 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                   />
                 )}
 
-                {request.hints_count && request.hints_count > 0 && currentQuestion.hint ? (
+                {request.hints_count && request.hints_count > 0 && currentQuestion ? (
                   <div className="space-y-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => toggleHint(currentQuestion.id)}
+                      onClick={() => {
+                        if (currentQuestion.hint) {
+                          toggleHint(currentQuestion.id);
+                          return;
+                        }
+                        void requestHintForQuestion(currentQuestion);
+                      }}
+                      disabled={hintLoadingById[currentQuestion.id]}
                     >
                       <Lightbulb className="mr-2 h-4 w-4" />
-                      {revealedHints[currentQuestion.id] ? "Hide Hint" : "Hint"}
+                      {hintLoadingById[currentQuestion.id]
+                        ? "Loading hint..."
+                        : revealedHints[currentQuestion.id]
+                          ? "Hide Hint"
+                          : "Hint"}
                     </Button>
-                    {revealedHints[currentQuestion.id] ? (
+                    {revealedHints[currentQuestion.id] && currentQuestion.hint ? (
                       <Alert className="border-borderColorPrimary bg-background">
                         <AlertTitle>Hint</AlertTitle>
                         <AlertDescription>{currentQuestion.hint}</AlertDescription>

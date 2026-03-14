@@ -108,6 +108,15 @@ const studentPrepSchema = z.object({
     });
   }
 
+  const questionCount = Number(data.questionCount);
+  if (!Number.isNaN(questionCount) && data.hintsCount > questionCount) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["hintsCount"],
+      message: "Hints cannot exceed number of questions",
+    });
+  }
+
   const durationIsValid =
     data.durationMinutes === "none" ||
     durationValues.includes(data.durationMinutes as (typeof durationValues)[number]);
@@ -229,6 +238,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
   const values = form.watch();
   const isFlashcardsMode = values.examMode === "flashcards";
+  const maxHintsAllowed = values.questionCount ? Number(values.questionCount) : 60;
 
   const onSubmit = (payload: StudentPrepFormValues) => {
     const selectedSubjectMeta = subjects.find((subject) => subject.id === payload.subjectId);
@@ -275,7 +285,11 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
     try {
       setIsCreatingRequest(true);
-      const safeHintLimit = Math.min(Math.max(pendingConfig.hintsCount, 0), 60);
+      const cappedHintLimit = Math.min(
+        Math.max(pendingConfig.hintsCount, 0),
+        pendingConfig.questionCount
+      );
+      const safeHintLimit = cappedHintLimit === 0 ? null : cappedHintLimit;
       const request = await eduQuestionRequestsApi.createQuestionRequest({
         organisationId: activeOrgId,
         title: trimmedTitle,
@@ -574,7 +588,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                         <Input
                           type="number"
                           min={0}
-                          max={60}
+                          max={maxHintsAllowed}
                           value={Number.isNaN(field.value) ? 0 : field.value}
                           onChange={(event) => {
                             const nextValue = event.target.valueAsNumber;
