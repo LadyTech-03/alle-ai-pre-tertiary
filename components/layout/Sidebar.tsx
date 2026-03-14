@@ -705,23 +705,35 @@ export function Sidebar() {
             <div className="h-px bg-border/70 mx-4 mb-2"></div>
 
             {/* Scrollable content area */}
-            <div className="flex-1 overflow-hidden flex flex-col mt-4">
+            <div className="flex-1 overflow-hidden flex flex-col mt-4 min-w-0">
 
               {/* Projects Section */}
               {(pathname.includes('chat') || pathname.includes('project')) && (
 
                 <>
                   <div className="flex-shrink-0 px-2">
-                    <div className="flex flex-col gap-2 items-start mx-2 text-sm font-medium text-muted-foreground mb-2">
-                      <span className="uppercase">{sessionUser?.class_group_name}</span>
-                      <span>Subjects</span>
+                    <div className="flex items-end justify-between mx-2 text-sm font-medium text-muted-foreground mb-2">
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="uppercase text-xs tracking-wide">{sessionUser?.class_group_name}</span>
+                        <span className="text-xs">Subjects</span>
+                      </div>
+                      {hasMoreProjects && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setProjectsListModalOpen(true)}
+                        >
+                          See all
+                        </Button>
+                      )}
                     </div>
                   </div>
 
 
                   {/* Scrollable projects list */}
-                  <ScrollArea className="flex-shrink-0 max-h-[600px] overflow-y-auto">
-                    <div className="px-2 space-y-2 py-1">
+                  <ScrollArea className="flex-shrink-0 w-full max-h-[600px] overflow-y-auto overflow-x-hidden">
+                    <div className="w-full max-w-[98%] px-2 space-y-1 py-1">
                       {projectsLoading ? (
                         <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
                           <Loader className="h-4 w-4 animate-spin text-muted-foreground mb-1" />
@@ -735,79 +747,93 @@ export function Sidebar() {
                               onOpenChange={() => toggleProjectExpanded(project.uuid)}
                             >
                               <ContextMenu>
-                                <ContextMenuTrigger>
-                                  <div className={`group relative flex items-center justify-between p-2 rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-md ${currentProject?.uuid === project.uuid && (pathname.startsWith(`/project/${project.uuid}`) || pathname.includes(`/project/${project.uuid}`))
-                                    ? 'bg-secondary border-primary/20 shadow-sm'
-                                    : 'bg-background hover:bg-secondary/50 border-border/40 hover:border-border'
-                                    }`}>
-                                    <div className="flex items-center gap-3 flex-1 min-w-0" onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleProjectClick(project);
-                                    }}>
+                                <CollapsibleTrigger asChild>
+                                  <ContextMenuTrigger asChild>
+                                    <div
+                                      role="button"
+                                      tabIndex={0}
+                                      className={`group relative w-full max-w-lg overflow-hidden flex items-center justify-between px-2 py-1.5 rounded-lg border transition-all duration-200 cursor-pointer ${currentProject?.uuid === project.uuid && (pathname.startsWith(`/project/${project.uuid}`) || pathname.includes(`/project/${project.uuid}`))
+                                        ? 'bg-secondary border-primary/20 shadow-sm'
+                                        : 'bg-background hover:bg-secondary/50 border-border/40 hover:border-border'
+                                        }`}
+                                    >
+                                      <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+                                        <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-200 ${expandedProjects[project.uuid] ? 'rotate-90' : ''}`} />
 
-                                      {/* Text Content */}
-                                      <div className="flex flex-col min-w-0 overflow-hidden text-left flex-1 space-y-0.5">
-                                        {editingProjectId === project.uuid ? (
-                                          <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                                            <Input
-                                              value={editingProjectName}
-                                              onChange={(e) => setEditingProjectName(e.target.value)}
-                                              onKeyDown={(e) => {
-                                                if (e.key === "Enter") {
-                                                  handleProjectRenameSubmit(project.uuid);
-                                                }
-                                              }}
-                                              autoFocus
-                                              className="h-6 text-sm"
-                                            />
-                                            {renamingProjectId === project.uuid ? (
-                                              <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
-                                            ) : (
-                                              <>
-                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleProjectRenameSubmit(project.uuid)}><Check className="h-4 w-4" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setEditingProjectId(null); setEditingProjectName(""); }}><X className="h-4 w-4" /></Button>
-                                              </>
-                                            )}
-                                          </div>
-                                        ) : (
-                                          <>
-                                            <span className="text-xs font-bold truncate text-foreground group-hover:text-foreground">
-                                              <TextStream
-                                                text={project.name}
-                                                className="truncate overflow-hidden text-ellipsis"
-                                                isStreaming={streamingTitles[`project-${project.uuid}`] || false}
-                                                streamDuration={800}
+                                        {/* Text Content */}
+                                        <div className="flex flex-col min-w-0 overflow-hidden text-left flex-1 space-y-0.5">
+                                          {editingProjectId === project.uuid ? (
+                                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                              <Input
+                                                value={editingProjectName}
+                                                onChange={(e) => setEditingProjectName(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === "Enter") {
+                                                    handleProjectRenameSubmit(project.uuid);
+                                                  }
+                                                }}
+                                                autoFocus
+                                                className="h-6 text-sm"
                                               />
-                                            </span>
-                                          </>
+                                              {renamingProjectId === project.uuid ? (
+                                                <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
+                                              ) : (
+                                                <>
+                                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleProjectRenameSubmit(project.uuid)}><Check className="h-4 w-4" /></Button>
+                                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setEditingProjectId(null); setEditingProjectName(""); }}><X className="h-4 w-4" /></Button>
+                                                </>
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <div
+                                              className="flex-1 min-w-0 max-w-full overflow-hidden"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleProjectClick(project);
+                                              }}
+                                            >
+                                              <div className="text-xs font-bold text-foreground group-hover:text-foreground truncate max-w-full">
+                                                <TextStream
+                                                  text={project.name}
+                                                  className="truncate"
+                                                  isStreaming={streamingTitles[`project-${project.uuid}`] || false}
+                                                  streamDuration={800}
+                                                />
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Right controls */}
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        {!!project.histories?.length && (
+                                          <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-muted/40 text-muted-foreground">
+                                            {project.histories.length}
+                                          </span>
+                                        )}
+                                        {!editingProjectId && (
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={e => e.stopPropagation()}
+                                              >
+                                                <EllipsisVertical className="h-4 w-4" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-[160px] rounded-xl bg-backgroundSecondary">
+                                              <DropdownMenuItem onClick={() => handleProjectRename(project.uuid, project.name)}><Pencil className="mr-2 h-4 w-4" /><span className="text-sm">Rename</span></DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => setProjectToDelete(project.uuid)} className="text-red-500"><Trash2 className="mr-2 h-4 w-4" /><span className="text-sm">Delete</span></DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
                                         )}
                                       </div>
                                     </div>
-
-                                    {/* Right controls */}
-                                    <div className="flex items-center gap-1">
-                                      <CollapsibleTrigger asChild>
-                                        <div className="p-1 rounded-md text-muted-foreground/50 group-hover:text-muted-foreground hover:bg-background/80 transition-all">
-                                          <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${expandedProjects[project.uuid] ? 'rotate-90' : ''}`} />
-                                        </div>
-                                      </CollapsibleTrigger>
-
-                                      {!editingProjectId && (
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                              <EllipsisVertical className="h-4 w-4" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end" className="w-[160px] rounded-xl bg-backgroundSecondary">
-                                            <DropdownMenuItem onClick={() => handleProjectRename(project.uuid, project.name)}><Pencil className="mr-2 h-4 w-4" /><span className="text-sm">Rename</span></DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setProjectToDelete(project.uuid)} className="text-red-500"><Trash2 className="mr-2 h-4 w-4" /><span className="text-sm">Delete</span></DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      )}
-                                    </div>
-                                  </div>
-                                </ContextMenuTrigger>
+                                  </ContextMenuTrigger>
+                                </CollapsibleTrigger>
                                 <ContextMenuContent className="bg-backgroundSecondary rounded-xl">
                                   <ContextMenuItem onClick={() => handleProjectRename(project.uuid, project.name)}>
                                     <Pencil className="mr-2 h-4 w-4" />
@@ -825,7 +851,7 @@ export function Sidebar() {
                                 </ContextMenuContent>
                               </ContextMenu>
 
-                              <CollapsibleContent className="mt-1 space-y-1">
+                              <CollapsibleContent className="mt-0.5 space-y-1">
                                 {project.histories && project.histories.length > 0 ? (
                                   <>
                                     {project.histories.slice(0, 3).map((chat) => (
@@ -1052,21 +1078,7 @@ export function Sidebar() {
                             </Collapsible>
                           ))}
 
-                          {/* More projects button */}
-                          {hasMoreProjects && (
-                            <div
-                              className="flex items-center gap-2 px-2 py-2 mt-1 text-primary hover:bg-secondary/80 rounded-md cursor-pointer"
-                              onClick={() => setProjectsListModalOpen(true)}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <ChevronRight className="h-3.5 w-3.5" />
-                                <span className="text-xs font-medium">
-                                  See all subjects
-                                  {/* ({projects.length}) */}
-                                </span>
-                              </div>
-                            </div>
-                          )}
+                          {/* See all moved to header */}
                         </>
                       ) : (
                         // <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
