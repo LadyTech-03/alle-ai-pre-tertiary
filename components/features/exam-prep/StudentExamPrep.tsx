@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ComponentType } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +37,6 @@ import {
   Trophy,
   BrainCircuit,
   FileQuestion,
-  Sparkles,
   Info,
   Loader2,
   Clock3,
@@ -50,7 +49,8 @@ import { toast } from "sonner";
 import { useOrgSessionStore } from "@/stores";
 import {
   eduQuestionRequestsApi,
-  type CreateMockQuestionSessionResponse,
+  type EduQuestionRequest,
+  type QuestionBatchResponse,
   type QuestionRequestType,
 } from "@/lib/api/eduQuestionRequests";
 import type { StudentDifficulty, StudentExamMode, SubjectOption } from "./types";
@@ -71,7 +71,7 @@ const studentPrepSchema = z.object({
   durationMinutes: z.string(),
   subjectId: z.string().min(1, "Select a subject"),
   timedMode: z.boolean(),
-  hintsEnabled: z.boolean(),
+  hintsCount: z.coerce.number().int().min(0).max(60),
   explanationsEnabled: z.boolean(),
 }).superRefine((data, ctx) => {
   const mode = data.examMode as StudentExamMode;
@@ -137,7 +137,18 @@ interface StudentExamPrepProps {
 
 interface PreparedSession {
   mode: StudentExamMode;
-  session: CreateMockQuestionSessionResponse;
+  request: EduQuestionRequest;
+  initialBatch: QuestionBatchResponse;
+}
+
+interface PendingExamConfig {
+  mode: StudentExamMode;
+  modeLabel: string;
+  subject: SubjectOption;
+  questionCount: number;
+  durationSeconds: number | null;
+  hintsCount: number;
+  allowsExplanation: boolean;
 }
 
 const modeDetails: Array<{ id: StudentExamMode; label: string; icon: ComponentType<{ className?: string }>; note: string }> = [
@@ -188,11 +199,14 @@ const formatSessionDuration = (seconds: number | null) => {
   return `${totalMinutes} minutes`;
 };
 
+const DEFAULT_BATCH_SIZE = 5;
+
 export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   const { orgId } = useOrgSessionStore();
   const activeOrgId = orgId ?? "1";
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [pendingSession, setPendingSession] = useState<PreparedSession | null>(null);
+  const [isCreatingRequest, setIsCreatingRequest] = useState(false);
+  const [pendingConfig, setPendingConfig] = useState<PendingExamConfig | null>(null);
+  const [pendingTitle, setPendingTitle] = useState("");
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [activeSession, setActiveSession] = useState<PreparedSession | null>(null);
 
@@ -208,7 +222,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
       durationMinutes: "none",
       subjectId: "",
       timedMode: false,
-      hintsEnabled: false,
+      hintsCount: 0,
       explanationsEnabled: false,
     },
   });
@@ -216,22 +230,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
   const values = form.watch();
   const isFlashcardsMode = values.examMode === "flashcards";
 
-  const selectedSubject = useMemo(
-    () => subjects.find((subject) => subject.id === values.subjectId) ?? null,
-    [subjects, values.subjectId]
-  );
-
-  const completedRequiredFields = [
-    values.examMode,
-    // values.difficulty,
-    // values.focus,
-    values.questionCount,
-    values.subjectId ? "subject" : "",
-  ].filter(Boolean).length + (values.timedMode ? (values.durationMinutes !== "none" ? 1 : 0) : 0);
-
-  const requiredFieldCount = values.timedMode ? 6 : 5;
-
-  const onSubmit = async (payload: StudentPrepFormValues) => {
+  const onSubmit = (payload: StudentPrepFormValues) => {
     const selectedSubjectMeta = subjects.find((subject) => subject.id === payload.subjectId);
 
     if (!selectedSubjectMeta) {
@@ -241,53 +240,94 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
     const mode = payload.examMode as StudentExamMode;
     const modeLabel = modeDetails.find((item) => item.id === mode)?.label ?? "Practice";
+    if (mode !== "mcq") {
+      toast.error("Only MCQ/Objectives is available right now.");
+      return;
+    }
+
+    const questionCount = Number(payload.questionCount);
+    const durationMinutes =
+      payload.durationMinutes === "none" ? null : Number(payload.durationMinutes);
+
+    setPendingConfig({
+      mode,
+      modeLabel,
+      subject: selectedSubjectMeta,
+      questionCount,
+      durationSeconds: durationMinutes === null ? null : durationMinutes * 60,
+      hintsCount: payload.hintsCount,
+      allowsExplanation: payload.explanationsEnabled,
+    });
+    setPendingTitle(`${selectedSubjectMeta.name} Quiz`);
+    setIsInstructionsOpen(true);
+  };
+
+  const handleBeginExam = async () => {
+    if (!pendingConfig) {
+      return;
+    }
+
+    const trimmedTitle = pendingTitle.trim();
+    if (!trimmedTitle) {
+      toast.error("Add a title for this test.");
+      return;
+    }
 
     try {
-      setIsGenerating(true);
-      const questionCount = Number(payload.questionCount);
-      const durationMinutes =
-        payload.durationMinutes === "none" ? null : Number(payload.durationMinutes);
-
-      const session = await eduQuestionRequestsApi.createMockQuestionSession({
+      setIsCreatingRequest(true);
+      const safeHintLimit = Math.min(Math.max(pendingConfig.hintsCount, 0), 60);
+      const request = await eduQuestionRequestsApi.createQuestionRequest({
         organisationId: activeOrgId,
-        title: `${modeLabel} Practice`,
-        type: modeToRequestType[mode],
-        // difficulty: payload.difficulty,
-        number: questionCount,
-        timeLimitSeconds: durationMinutes === null ? null : durationMinutes * 60,
-        allowsExplanation: payload.explanationsEnabled,
-        hintsCount: payload.hintsEnabled ? 3 : 0,
-        // focus: payload.focus,
-        subjects: [{ id: selectedSubjectMeta.id, name: selectedSubjectMeta.name }],
-        batchSize: 5,
+        title: trimmedTitle,
+        courseUuid: pendingConfig.subject.id,
+        number: pendingConfig.questionCount,
+        type: modeToRequestType[pendingConfig.mode],
+        hintLimit: safeHintLimit,
+        timeLimitSeconds: pendingConfig.durationSeconds,
+        allowsExplanation: pendingConfig.allowsExplanation,
+        courseFiles: null,
+        additionalNote: null,
+        topics: null,
+        useMock: false,
       });
 
-      setPendingSession({
-        mode,
-        session,
+      const requestWithSubject: EduQuestionRequest = {
+        ...request,
+        course_name: pendingConfig.subject.name,
+      };
+
+      const initialBatch = await eduQuestionRequestsApi.getQuestionBatch({
+        organisationId: activeOrgId,
+        requestId: request.id,
+        page: 1,
+        perPage: DEFAULT_BATCH_SIZE,
+        endUserType: "Student",
+        totalQuestions: request.number,
+        subjectId: request.course_uuid,
+        subjectName: pendingConfig.subject.name,
+        useMock: false,
       });
 
-      setIsInstructionsOpen(true);
+      setActiveSession({
+        mode: pendingConfig.mode,
+        request: requestWithSubject,
+        initialBatch,
+      });
+      setPendingConfig(null);
+      setPendingTitle("");
+      setIsInstructionsOpen(false);
     } catch {
       toast.error("Failed to start practice. Try again.");
     } finally {
-      setIsGenerating(false);
+      setIsCreatingRequest(false);
     }
-  };
-
-  const handleBeginExam = () => {
-    if (!pendingSession) {
-      return;
-    }
-    setActiveSession(pendingSession);
-    setPendingSession(null);
-    setIsInstructionsOpen(false);
   };
 
   const handleInstructionModalChange = (open: boolean) => {
     setIsInstructionsOpen(open);
     if (!open) {
-      setPendingSession(null);
+      setPendingConfig(null);
+      setPendingTitle("");
     }
   };
 
@@ -295,8 +335,8 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
     if (activeSession.mode === "flashcards") {
       return (
         <StudentFlashcardsSession
-          request={activeSession.session.request}
-          initialBatch={activeSession.session.firstBatch}
+          request={activeSession.request}
+          initialBatch={activeSession.initialBatch}
           onExit={() => setActiveSession(null)}
         />
       );
@@ -304,8 +344,8 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
     return (
       <StudentExamSession
-        request={activeSession.session.request}
-        initialBatch={activeSession.session.firstBatch}
+        request={activeSession.request}
+        initialBatch={activeSession.initialBatch}
         onExit={() => setActiveSession(null)}
       />
     );
@@ -526,13 +566,24 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
               <div className="grid gap-2 sm:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="hintsEnabled"
+                  name="hintsCount"
                   render={({ field }) => (
-                    <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <Label className="text-sm">Hints</Label>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </div>
+                    <FormItem className="rounded-lg">
+                      <FormLabel className="text-xs text-muted-foreground">Hints (max 60)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={60}
+                          value={Number.isNaN(field.value) ? 0 : field.value}
+                          onChange={(event) => {
+                            const nextValue = event.target.valueAsNumber;
+                            field.onChange(Number.isNaN(nextValue) ? 0 : nextValue);
+                          }}
+                          className="mt-2 h-9"
+                        />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -540,7 +591,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                   control={form.control}
                   name="explanationsEnabled"
                   render={({ field }) => (
-                    <FormItem className="rounded-lg border border-borderColorPrimary bg-background p-3">
+                    <FormItem className="rounded-lg">
                       <div className="flex items-center justify-between gap-2">
                         <Label className="text-sm">Explanations</Label>
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -550,8 +601,8 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={isGenerating}>
-                {isGenerating ? (
+              <Button type="submit" className="w-full" disabled={isCreatingRequest}>
+                {isCreatingRequest ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Generating Questions...
@@ -575,24 +626,52 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
             </DialogDescription>
           </DialogHeader>
 
-          {pendingSession ? (
+          {pendingConfig ? (
             <div className="space-y-4">
+              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                <Label className="text-xs text-muted-foreground">Test Title</Label>
+                <Input
+                  value={pendingTitle}
+                  onChange={(event) => setPendingTitle(event.target.value)}
+                  className="mt-2 h-9"
+                  placeholder="Personal Quiz 1"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
                   <p className="text-xs text-muted-foreground">Exam Type</p>
                   <p className="text-sm font-semibold">
-                    {modeDetails.find((mode) => mode.id === pendingSession.mode)?.label}
+                    {pendingConfig.modeLabel}
                   </p>
+                </div>
+                <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Subject</p>
+                  <p className="text-sm font-semibold">{pendingConfig.subject.name}</p>
+                </div>
+                <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Questions</p>
+                  <p className="text-sm font-semibold">{pendingConfig.questionCount}</p>
                 </div>
                 <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
                   <p className="text-xs text-muted-foreground">Duration</p>
                   <p className="text-sm font-semibold">
-                    {formatSessionDuration(pendingSession.session.request.time_limit)}
+                    {formatSessionDuration(pendingConfig.durationSeconds)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Hints</p>
+                  <p className="text-sm font-semibold">{pendingConfig.hintsCount}</p>
+                </div>
+                <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Explanations</p>
+                  <p className="text-sm font-semibold">
+                    {pendingConfig.allowsExplanation ? "Enabled" : "Off"}
                   </p>
                 </div>
               </div>
 
-              {pendingSession.mode === "flashcards" && (
+              {pendingConfig.mode === "flashcards" && (
                 <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2 text-xs text-muted-foreground">
                   <p className="font-medium text-foreground">Flashcard Flow</p>
                   <p className="mt-1">Click card to flip between front and back.</p>
@@ -604,7 +683,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 <p className="font-medium text-foreground">Before You Begin</p>
                 <ul className="mt-2 space-y-1 list-none">
                   <li>
-                    {pendingSession.session.request.time_limit ? (
+                    {pendingConfig.durationSeconds ? (
                       <span className="inline-flex items-center gap-1">
                         <Clock3 className="h-3.5 w-3.5" />
                         Timed sessions auto-submit at 00:00.
@@ -626,7 +705,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                     <span className="inline-flex items-center gap-1">
                       <ShieldCheck className="h-3.5 w-3.5" />
                       You&apos;ll be able to view your results after submission
-                      {pendingSession.session.request.allows_explanation ? " with explanations." : "."}
+                      {pendingConfig.allowsExplanation ? " with explanations." : "."}
                     </span>
                   </li>
                 </ul>
@@ -638,8 +717,19 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
             <Button type="button" variant="outline" onClick={() => handleInstructionModalChange(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleBeginExam} disabled={!pendingSession}>
-              Begin
+            <Button
+              type="button"
+              onClick={handleBeginExam}
+              disabled={!pendingConfig || isCreatingRequest || !pendingTitle.trim()}
+            >
+              {isCreatingRequest ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Begin"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

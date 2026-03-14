@@ -99,6 +99,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   const currentPage = Math.ceil(currentQuestionNumber / batchState.pageSize);
   const currentIndexInPage = (currentQuestionNumber - 1) % batchState.pageSize;
   const currentQuestion = questionPages[currentPage]?.[currentIndexInPage] ?? null;
+  const subjectLabel = currentQuestion?.subjectName ?? request.course_name ?? "Selected Subject";
 
   const answeredCount = useMemo(
     () => Object.values(answers).filter((value) => value.trim().length > 0).length,
@@ -153,10 +154,15 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
 
       while (attemptsLeft > 0) {
         const batch = await eduQuestionRequestsApi.getQuestionBatch({
+          organisationId: request.organisation_id,
           requestId: request.id,
           page,
           perPage: batchState.pageSize,
           endUserType: "Student",
+          totalQuestions: request.number,
+          subjectId: request.course_uuid,
+          subjectName: request.course_name,
+          useMock: false,
         });
 
         setBatchState({
@@ -513,7 +519,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="mt-2 text-lg font-semibold">{request.title} - ({currentQuestion.subjectName})</h2>
+              <h2 className="mt-2 text-lg font-semibold">{request.title} - ({subjectLabel})</h2>
               <p className="text-base text-muted-foreground font-semibold">
                 Question {currentQuestionNumber}
               </p>

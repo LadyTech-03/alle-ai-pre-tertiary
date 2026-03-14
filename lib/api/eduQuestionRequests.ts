@@ -10,16 +10,17 @@ export interface EduQuestionRequest {
   organisation_id: number;
   user_id: number;
   course_uuid: string;
+  course_name?: string;
   number: number;
   type: QuestionRequestType;
   time_limit: number | null;
-  allows_explanation: number | null;
+  allows_explanation: boolean | number | null;
   hints_count: number | null;
-  course_files: string[];
+  course_files: string[] | null;
   is_public: boolean;
   difficulty: string;
   additional_note: string | null;
-  generation_cost: string;
+  generation_cost: string | null;
   updated_at?: string;
   updaetd_at?: string;
   created_at: string;
@@ -61,6 +62,26 @@ export interface GetQuestionRequestsParams {
   page?: number;
   perPage?: number;
   useMock?: boolean;
+}
+
+export interface CreateQuestionRequestPayload {
+  organisationId: number | string;
+  title: string;
+  courseUuid: string;
+  number: number;
+  type: QuestionRequestType;
+  hintLimit: number;
+  timeLimitSeconds: number | null;
+  allowsExplanation: boolean;
+  courseFiles?: string[] | null;
+  additionalNote?: string | null;
+  topics?: string[] | null;
+  useMock?: boolean;
+}
+
+interface CreateQuestionRequestResponse {
+  message: string;
+  question_request: EduQuestionRequest;
 }
 
 export interface SimulateGenerateQuestionRequestPayload {
@@ -116,6 +137,23 @@ export interface GetQuestionBatchParams {
   perPage?: number;
   endUserType?: EndUserType;
   useMock?: boolean;
+  totalQuestions?: number;
+  subjectId?: string;
+  subjectName?: string;
+}
+
+interface EduGeneratedQuestionItem {
+  edu_question_request_id: number;
+  question: string;
+  options: string[];
+  points: number | null;
+  answer: string | null;
+  updated_at: string;
+  created_at: string;
+}
+
+interface EduGeneratedQuestionResponse {
+  data: EduGeneratedQuestionItem[];
 }
 
 export interface CreateMockQuestionSessionPayload {
@@ -322,6 +360,55 @@ const buildGeneratedQuestions = (payload: CreateMockQuestionSessionPayload): Gen
   });
 };
 
+const parseOptionLabel = (rawOption: string, index: number): GeneratedQuestionOption => {
+  const trimmed = rawOption.trim();
+  const match = trimmed.match(/^([A-Za-z])[\.\)]\s*(.+)$/);
+  if (match) {
+    return {
+      id: match[1].toUpperCase(),
+      text: match[2].trim(),
+    };
+  }
+
+  const fallbackId = String.fromCharCode(65 + index);
+  return {
+    id: fallbackId,
+    text: trimmed,
+  };
+};
+
+const normalizeGeneratedQuestions = (
+  items: EduGeneratedQuestionItem[],
+  subjectId: string,
+  subjectName: string,
+  requestId: number
+): GeneratedExamQuestion[] => {
+  const sorted = [...items].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
+  return sorted.map((item, index) => {
+    const options = Array.isArray(item.options) ? item.options : [];
+    const parsedOptions = options.map((option, optionIndex) =>
+      parseOptionLabel(option, optionIndex)
+    );
+    const normalizedAnswer = item.answer?.trim()?.[0]?.toUpperCase() ?? null;
+
+    return {
+      id: `${requestId}-${index + 1}`,
+      order: index + 1,
+      kind: "mcq",
+      prompt: item.question,
+      options: parsedOptions,
+      correctOptionId: normalizedAnswer,
+      subjectId,
+      subjectName,
+      hint: null,
+      explanation: null,
+    };
+  });
+};
+
 const createSessionFromRequest = (
   request: EduQuestionRequest,
   pageSize: number,
@@ -434,6 +521,51 @@ export const eduQuestionRequestsApi = {
     return response.data;
   },
 
+  createQuestionRequest: async (
+    payload: CreateQuestionRequestPayload
+  ): Promise<EduQuestionRequest> => {
+    const shouldUseMock = payload.useMock ?? useMockByDefault();
+
+    if (shouldUseMock) {
+      return eduQuestionRequestsApi.simulateGenerateQuestionRequest({
+        organisationId: payload.organisationId,
+        title: payload.title,
+        courseUuid: payload.courseUuid,
+        number: payload.number,
+        type: payload.type,
+        timeLimitSeconds: payload.timeLimitSeconds,
+        allowsExplanation: payload.allowsExplanation,
+        hintsCount: payload.hintLimit,
+        difficulty: "medium",
+        additionalNote: payload.additionalNote ?? undefined,
+        courseFiles: payload.courseFiles ?? undefined,
+      });
+    }
+
+    const response = await api.post<CreateQuestionRequestResponse>(
+      `/organisations/${payload.organisationId}/edu-question-request`,
+      {
+        course: payload.courseUuid,
+        title: payload.title,
+        number: payload.number,
+        type: payload.type,
+        hint_limit: payload.hintLimit,
+        time_limit: payload.timeLimitSeconds,
+        allows_explanation: payload.allowsExplanation,
+        course_files: payload.courseFiles ?? null,
+        // additional_note: payload.additionalNote ?? null,
+        // topics: payload.topics ?? null,
+      },
+      {
+        headers: {
+          EndUserType: "Student",
+        },
+      }
+    );
+
+    return response.data.question_request;
+  },
+
   simulateGenerateQuestionRequest: async (
     payload: SimulateGenerateQuestionRequestPayload
   ): Promise<EduQuestionRequest> => {
@@ -510,6 +642,9 @@ export const eduQuestionRequestsApi = {
     perPage = DEFAULT_BATCH_SIZE,
     endUserType = "Student",
     useMock,
+    totalQuestions,
+    subjectId,
+    subjectName,
   }: GetQuestionBatchParams): Promise<QuestionBatchResponse> => {
     const shouldUseMock = useMock ?? useMockByDefault();
 
@@ -519,21 +654,48 @@ export const eduQuestionRequestsApi = {
       return buildQuestionBatch(session, page);
     }
 
-    const endpoint = organisationId
-      ? `/organisations/${organisationId}/edu-question-requests/${requestId}/questions`
-      : `/edu-question-requests/${requestId}/questions`;
+    if (!organisationId) {
+      throw new Error("Organisation ID is required to fetch generated questions.");
+    }
 
-    const response = await api.get<QuestionBatchResponse>(endpoint, {
+    const endpoint = `/organisations/${organisationId}/edu-question-request/${requestId}/questions`;
+
+    const response = await api.get<EduGeneratedQuestionResponse>(endpoint, {
       headers: {
         EndUserType: endUserType,
       },
-      params: {
-        page,
-        per_page: perPage,
-      },
     });
 
-    return response.data;
+    const normalizedPage = Math.max(1, page);
+    const resolvedSubjectId = subjectId ?? `${requestId}`;
+    const resolvedSubjectName = subjectName ?? "Selected Subject";
+    const generated = normalizeGeneratedQuestions(
+      response.data.data ?? [],
+      resolvedSubjectId,
+      resolvedSubjectName,
+      requestId
+    );
+    const resolvedTotalQuestions = totalQuestions ?? generated.length;
+    const totalPages = Math.max(1, Math.ceil(resolvedTotalQuestions / perPage));
+    const safePage = Math.min(normalizedPage, totalPages);
+    const startIndex = (safePage - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    const availableCount = generated.length;
+    const readyThroughPage = availableCount === 0 ? 0 : Math.ceil(availableCount / perPage);
+    const isReady = startIndex < availableCount;
+    const data = isReady ? generated.slice(startIndex, endIndex) : [];
+
+    return {
+      requestId,
+      page: safePage,
+      perPage,
+      totalQuestions: resolvedTotalQuestions,
+      totalPages,
+      readyThroughPage,
+      isReady,
+      isGenerating: availableCount < resolvedTotalQuestions,
+      data,
+    };
   },
 
   resetMockQuestionRequests: () => {

@@ -208,10 +208,15 @@ export function StudentFlashcardsSession({
       let attempts = waitUntilReady ? BATCH_POLL_MAX_ATTEMPTS : 1;
       while (attempts > 0) {
         const batch = await eduQuestionRequestsApi.getQuestionBatch({
+          organisationId: request.organisation_id,
           requestId: request.id,
           page: nextPage,
           perPage: batchState.pageSize,
           endUserType: "Student",
+          totalQuestions: request.number,
+          subjectId: request.course_uuid,
+          subjectName: request.course_name,
+          useMock: false,
         });
 
         setBatchState({
