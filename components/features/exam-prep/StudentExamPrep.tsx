@@ -55,7 +55,7 @@ import {
 } from "@/lib/api/eduQuestionRequests";
 import type { StudentDifficulty, StudentExamMode, SubjectOption } from "./types";
 
-const DEFAULT_BATCH_SIZE = 5;
+const DEFAULT_BATCH_SIZE = 10;
 const studentModeValues = ["flashcards", "theory", "mcq"] as const;
 const difficultyValues = ["adaptive", "easy", "medium", "hard"] as const;
 const focusValues = ["mixed", "weak", "recent"] as const;

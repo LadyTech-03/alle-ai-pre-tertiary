@@ -23,7 +23,7 @@ interface StoredSession {
   initialBatch: QuestionBatchResponse;
 }
 
-const DEFAULT_BATCH_SIZE = 5;
+const DEFAULT_BATCH_SIZE = 10;
 
 const requestTypeToMode = (type: QuestionRequestType): StudentExamMode => {
   if (type === "flashcards") return "flashcards";

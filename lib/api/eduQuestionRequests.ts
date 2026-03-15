@@ -250,7 +250,7 @@ const mockExamSessions = new Map<number, MockSessionState>();
 const MOCK_DELAY_MS = 650;
 const MOCK_BATCH_DELAY_MS = 450;
 const MOCK_BATCH_INTERVAL_MS = 1500;
-const DEFAULT_BATCH_SIZE = 5;
+const DEFAULT_BATCH_SIZE = 10;
 
 const sleep = (ms: number) =>
   new Promise((resolve) => {
