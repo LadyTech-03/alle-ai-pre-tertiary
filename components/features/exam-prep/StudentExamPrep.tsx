@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import {
   Dialog,
   DialogContent,
@@ -56,18 +57,23 @@ import {
 import type { StudentDifficulty, StudentExamMode, SubjectOption } from "./types";
 
 const DEFAULT_BATCH_SIZE = 10;
+const QUESTION_MIN = 5;
+const QUESTION_MAX = 60;
+const QUESTION_STEP = 5;
+const DURATION_MIN = 10;
+const DURATION_MAX = 120;
+const DURATION_STEP = 5;
+const DURATION_PRESETS = [15, 30, 45, 60, 90];
 const studentModeValues = ["flashcards", "theory", "mcq"] as const;
 const difficultyValues = ["adaptive", "easy", "medium", "hard"] as const;
 const focusValues = ["mixed", "weak", "recent"] as const;
-const questionCountValues = ["5", "10", "15", "20", "25", "30", "40", "50", "60"] as const;
-const durationValues = ["10", "15", "20", "30", "45", "60", "90", "120"] as const;
 
 const studentPrepSchema = z.object({
   examMode: z.string(),
   // difficulty: z.string(),
   // focus: z.string(),
-  questionCount: z.string(),
-  durationMinutes: z.string(),
+  questionCount: z.coerce.number().int().min(QUESTION_MIN).max(QUESTION_MAX),
+  durationMinutes: z.coerce.number().int().min(DURATION_MIN).max(DURATION_MAX),
   subjectId: z.string().min(1, "Select a subject"),
   timedMode: z.boolean(),
   hintsCount: z.coerce.number().int().min(0).max(60),
@@ -99,14 +105,6 @@ const studentPrepSchema = z.object({
   //   });
   // }
 
-  if (!questionCountValues.includes(data.questionCount as (typeof questionCountValues)[number])) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["questionCount"],
-      message: "Select number of questions",
-    });
-  }
-
   const questionCount = Number(data.questionCount);
   if (!Number.isNaN(questionCount) && data.hintsCount > questionCount) {
     ctx.addIssue({
@@ -116,23 +114,16 @@ const studentPrepSchema = z.object({
     });
   }
 
-  const durationIsValid =
-    data.durationMinutes === "none" ||
-    durationValues.includes(data.durationMinutes as (typeof durationValues)[number]);
-
-  if (!durationIsValid) {
+  if (
+    data.timedMode &&
+    (Number.isNaN(data.durationMinutes) ||
+      data.durationMinutes < DURATION_MIN ||
+      data.durationMinutes > DURATION_MAX)
+  ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["durationMinutes"],
-      message: "Select duration",
-    });
-  }
-
-  if (data.timedMode && data.durationMinutes === "none") {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["durationMinutes"],
-      message: "Select a duration or disable timed mode",
+      message: "Select a valid duration or disable timed mode",
     });
   }
 });
@@ -219,8 +210,8 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
       examMode: "",
       // difficulty: "",
       // focus: "",
-      questionCount: "",
-      durationMinutes: "none",
+      questionCount: 20,
+      durationMinutes: 30,
       subjectId: "",
       timedMode: false,
       hintsCount: 0,
@@ -230,7 +221,13 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
   const values = form.watch();
   const isFlashcardsMode = values.examMode === "flashcards";
-  const maxHintsAllowed = values.questionCount ? Number(values.questionCount) : 60;
+  const resolvedQuestionCount = Number.isFinite(values.questionCount)
+    ? values.questionCount
+    : QUESTION_MAX;
+  const maxHintsAllowed = Math.min(resolvedQuestionCount, QUESTION_MAX);
+  const resolvedDuration = Number.isFinite(values.durationMinutes)
+    ? values.durationMinutes
+    : 30;
 
   const onSubmit = (payload: StudentPrepFormValues) => {
     const selectedSubjectMeta = subjects.find((subject) => subject.id === payload.subjectId);
@@ -243,9 +240,8 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
     const mode = payload.examMode as StudentExamMode;
     const modeLabel = modeDetails.find((item) => item.id === mode)?.label ?? "Practice";
 
-    const questionCount = Number(payload.questionCount);
-    const durationMinutes =
-      payload.durationMinutes === "none" ? null : Number(payload.durationMinutes);
+    const questionCount = payload.questionCount;
+    const durationMinutes = payload.timedMode ? payload.durationMinutes : null;
 
     setPendingConfig({
       mode,
@@ -435,7 +431,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 )}
               />
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 lg:grid-cols-2">
                 {/* <FormField
                   control={form.control}
                   name="difficulty"
@@ -488,97 +484,208 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                 <FormField
                   control={form.control}
                   name="questionCount"
-                  render={({ field }) => (
-                    <FormItem className="rounded-lg">
-                      <FormLabel className="text-xs text-muted-foreground">Questions</FormLabel>
-                      <Select
-                        value={field.value || undefined}
-                        onValueChange={field.onChange}
-                      >
+                  render={({ field }) => {
+                    const displayValue = Number.isFinite(field.value) ? field.value : QUESTION_MIN;
+                    return (
+                      <FormItem className="space-y-3 rounded-lg border border-borderColorPrimary bg-background p-4">
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-xs text-muted-foreground">Number of questions</FormLabel>
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">
+                            {displayValue}
+                          </span>
+                        </div>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="How many questions ?" />
-                          </SelectTrigger>
+                          <Slider
+                            min={QUESTION_MIN}
+                            max={QUESTION_MAX}
+                            step={QUESTION_STEP}
+                            value={[displayValue]}
+                            onValueChange={([value]) => {
+                              field.onChange(value);
+                              if (form.getValues("hintsCount") > value) {
+                                form.setValue("hintsCount", value, {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
+                              }
+                            }}
+                          />
                         </FormControl>
-                        <SelectContent>
-                          {questionCountValues.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span>{QUESTION_MIN}</span>
+                          <span>{QUESTION_MAX}</span>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
-                <FormField
-                  control={form.control}
-                  name="durationMinutes"
-                  render={({ field }) => (
-                    <FormItem className="rounded-lg">
-                      <FormLabel className="text-xs text-muted-foreground">Duration (minutes)</FormLabel>
-                      <Select
-                        value={field.value || undefined}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          form.setValue("timedMode", value !== "none", {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          });
-                        }}
-                      >
+
+                <div
+                  className={cn(
+                    "space-y-4 rounded-lg border p-4 transition-colors",
+                    values.timedMode
+                      ? "border-primary/50 bg-primary/5"
+                      : "border-borderColorPrimary bg-background"
+                  )}
+                >
+                  <FormField
+                    control={form.control}
+                    name="timedMode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <FormLabel className="text-xs text-muted-foreground">Time limit</FormLabel>
+                            <p className="text-sm font-semibold">
+                              {field.value ? `${resolvedDuration} minutes` : "Untimed session"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-muted-foreground">
+                              {field.value ? "Timed" : "Untimed"}
+                            </span>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                if (checked) {
+                                  form.setValue("durationMinutes", resolvedDuration, {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  });
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="durationMinutes"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select duration" />
-                          </SelectTrigger>
+                          <Slider
+                            min={DURATION_MIN}
+                            max={DURATION_MAX}
+                            step={DURATION_STEP}
+                            value={[Number.isFinite(field.value) ? field.value : DURATION_MIN]}
+                            onValueChange={([value]) => {
+                              field.onChange(value);
+                              if (!values.timedMode) {
+                                form.setValue("timedMode", true, {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
+                              }
+                            }}
+                            disabled={!values.timedMode}
+                          />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">No time limit</SelectItem>
-                          {durationValues.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
+                        <div className="flex flex-wrap gap-2">
+                          {DURATION_PRESETS.map((preset) => (
+                            <Button
+                              key={preset}
+                              type="button"
+                              size="sm"
+                              variant={
+                                resolvedDuration === preset && values.timedMode ? "secondary" : "outline"
+                              }
+                              onClick={() => {
+                                field.onChange(preset);
+                                form.setValue("timedMode", true, {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
+                              }}
+                            >
+                              {preset}m
+                            </Button>
                           ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Slide or tap a preset to set your time. Disable for untimed sessions.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-4 lg:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="hintsCount"
-                  render={({ field }) => (
-                    <FormItem className="rounded-lg">
-                      <FormLabel className="text-xs text-muted-foreground">Hints (max 60)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={maxHintsAllowed}
-                          value={Number.isNaN(field.value) ? 0 : field.value}
-                          onChange={(event) => {
-                            const nextValue = event.target.valueAsNumber;
-                            field.onChange(Number.isNaN(nextValue) ? 0 : nextValue);
-                          }}
-                          className="mt-2 h-9"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const hintValue = Number.isFinite(field.value) ? field.value : 0;
+                    return (
+                      <FormItem
+                        className={cn(
+                          "space-y-3 rounded-lg border p-4 transition-colors",
+                          hintValue > 0
+                            ? "border-amber-500/40 bg-amber-500/5"
+                            : "border-borderColorPrimary bg-background"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <FormLabel className="text-xs text-muted-foreground">Hints</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={maxHintsAllowed}
+                              value={hintValue}
+                              onChange={(event) => {
+                                const nextValue = event.target.valueAsNumber;
+                                const safeValue = Number.isNaN(nextValue)
+                                  ? 0
+                                  : Math.min(nextValue, maxHintsAllowed);
+                                field.onChange(safeValue);
+                              }}
+                              className="h-8 w-16 text-center"
+                            />
+                            <span className="text-[11px] text-muted-foreground">
+                              max {maxHintsAllowed}
+                            </span>
+                          </div>
+                        </div>
+                        <FormControl>
+                          <Slider
+                            min={0}
+                            max={maxHintsAllowed}
+                            step={1}
+                            value={[hintValue]}
+                            onValueChange={([value]) => field.onChange(value)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
                 <FormField
                   control={form.control}
                   name="explanationsEnabled"
                   render={({ field }) => (
-                    <FormItem className="rounded-lg">
-                      <div className="flex items-center justify-between gap-2">
-                        <Label className="text-sm">Explanations</Label>
+                    <FormItem
+                      className={cn(
+                        "rounded-lg border p-4 transition-colors",
+                        field.value
+                          ? "border-emerald-500/40 bg-emerald-500/5"
+                          : "border-borderColorPrimary bg-background"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <FormLabel className="text-sm">Explanations</FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Show solution breakdowns after submission.
+                          </p>
+                        </div>
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
                       </div>
                     </FormItem>
