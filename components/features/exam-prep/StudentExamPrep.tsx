@@ -370,7 +370,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                               className={cn(
                                 "flex items-center justify-between rounded-lg border p-4 text-left border-borderColorPrimary",
                                 active
-                                  ? " bg-backgroundSecondary"
+                                  ? "border-emerald-500/40 bg-emerald-500/5"
                                   : "hover:bg-accent"
                               )}
                             >
@@ -525,7 +525,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                   className={cn(
                     "space-y-4 rounded-lg border p-4 transition-colors",
                     values.timedMode
-                      ? "border-primary/50 bg-primary/5"
+                      ? "border-emerald-500/40 bg-emerald-500/5"
                       : "border-borderColorPrimary bg-background"
                   )}
                 >
@@ -543,7 +543,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-[11px] text-muted-foreground">
-                              {field.value ? "Timed" : "Untimed"}
+                              {field.value ? "Timed" : "No time limit"}
                             </span>
                             <Switch
                               checked={field.value}
@@ -585,7 +585,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                             disabled={!values.timedMode}
                           />
                         </FormControl>
-                        <div className="flex flex-wrap gap-2">
+                        {/* <div className="flex flex-wrap gap-2">
                           {DURATION_PRESETS.map((preset) => (
                             <Button
                               key={preset}
@@ -605,10 +605,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                               {preset}m
                             </Button>
                           ))}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Slide or tap a preset to set your time. Disable for untimed sessions.
-                        </p>
+                        </div> */}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -627,12 +624,12 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                         className={cn(
                           "space-y-3 rounded-lg border p-4 transition-colors",
                           hintValue > 0
-                            ? "border-amber-500/40 bg-amber-500/5"
+                            ? "border-emerald-500/40 bg-emerald-500/5"
                             : "border-borderColorPrimary bg-background"
                         )}
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <FormLabel className="text-xs text-muted-foreground">Hints</FormLabel>
+                          <FormLabel className="text-xs text-muted-foreground">Hints(Set the number of hints for the test)</FormLabel>
                           <div className="flex items-center gap-2">
                             <Input
                               type="number"
