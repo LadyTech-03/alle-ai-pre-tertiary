@@ -587,6 +587,8 @@ export const eduQuestionRequestsApi = {
       }
     );
 
+    console.log(response, 'Create question request response');
+
     return response.data.question_request;
   },
 
@@ -689,7 +691,7 @@ export const eduQuestionRequestsApi = {
         EndUserType: endUserType,
       },
     });
-
+    console.log(response, 'Exam batch generation response')
     const normalizedPage = Math.max(1, page);
     const resolvedSubjectId = subjectId ?? `${requestId}`;
     const resolvedSubjectName = subjectName ?? "Selected Subject";
@@ -735,6 +737,8 @@ export const eduQuestionRequestsApi = {
       await sleep(MOCK_DELAY_MS);
       return;
     }
+
+    console.log('Saving question answer:', { organisationId, requestId, questionId, answer });
 
     await api.post(
       `/organisations/${organisationId}/edu-question-attempt/${requestId}/answer`,
