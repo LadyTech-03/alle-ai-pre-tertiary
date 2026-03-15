@@ -250,10 +250,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
     const mode = payload.examMode as StudentExamMode;
     const modeLabel = modeDetails.find((item) => item.id === mode)?.label ?? "Practice";
-    if (mode !== "mcq") {
-      toast.error("Only MCQ/Objectives is available right now.");
-      return;
-    }
 
     const questionCount = Number(payload.questionCount);
     const durationMinutes =

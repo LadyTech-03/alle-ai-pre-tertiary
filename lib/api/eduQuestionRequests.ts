@@ -146,6 +146,7 @@ export interface GetQuestionBatchParams {
 interface EduGeneratedQuestionItem {
   id?: number | string;
   question_id?: number | string;
+  edu_question_id?: number | string;
   edu_question_request_id: number;
   question: string;
   options: string[];
@@ -172,7 +173,6 @@ export interface RequestQuestionHintPayload {
   organisationId: number | string;
   requestId: number | string;
   questionId: number | string;
-  answer: string | null;
   endUserType?: EndUserType;
   useMock?: boolean;
 }
@@ -410,21 +410,24 @@ const normalizeGeneratedQuestions = (
   );
 
   return sorted.map((item, index) => {
-    const options = Array.isArray(item.options) ? item.options : [];
+    const options = Array.isArray(item.options) ? item.options.filter((option) => typeof option === "string") : [];
     const parsedOptions = options.map((option, optionIndex) =>
       parseOptionLabel(option, optionIndex)
     );
-    const normalizedAnswer = item.answer?.trim()?.[0]?.toUpperCase() ?? null;
-    const externalQuestionId = item.id ?? item.question_id ?? `${requestId}-${index + 1}`;
+    const externalQuestionId =
+      item.id ??
+      item.question_id ??
+      item.edu_question_id ??
+      `${requestId}-${index + 1}`;
 
     return {
       id: String(externalQuestionId),
       questionId: externalQuestionId,
       order: index + 1,
-      kind: "mcq",
+      kind: options.length > 0 ? "mcq" : "theory",
       prompt: item.question,
       options: parsedOptions,
-      correctOptionId: normalizedAnswer,
+      correctOptionId: null,
       subjectId,
       subjectName,
       hint: null,
@@ -758,7 +761,6 @@ export const eduQuestionRequestsApi = {
     organisationId,
     requestId,
     questionId,
-    answer,
     endUserType = "Student",
     useMock,
   }: RequestQuestionHintPayload): Promise<string | null> => {
@@ -772,7 +774,6 @@ export const eduQuestionRequestsApi = {
       `/organisations/${organisationId}/edu-question-attempt/${requestId}/hint`,
       {
         question_id: questionId,
-        answer,
       },
       {
         headers: {
@@ -781,12 +782,24 @@ export const eduQuestionRequestsApi = {
       }
     );
 
-    return (
-      response.data?.hint ??
-      response.data?.data?.hint ??
-      response.data?.message ??
-      null
-    );
+    const rawHints = response.data?.data?.hints ?? response.data?.hints ?? null;
+    if (Array.isArray(rawHints)) {
+      return rawHints.filter(Boolean).join("\n") || null;
+    }
+
+    if (typeof rawHints === "string") {
+      try {
+        const parsed = JSON.parse(rawHints);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(Boolean).join("\n") || null;
+        }
+      } catch {
+        // fall through to returning the raw string
+      }
+      return rawHints;
+    }
+
+    return response.data?.message ?? null;
   },
 
   resetMockQuestionRequests: () => {

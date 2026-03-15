@@ -41,9 +41,6 @@ interface StudentExamSessionProps {
 interface SessionSummary {
   answeredCount: number;
   totalQuestions: number;
-  gradableCount: number;
-  correctCount: number;
-  scorePercent: number | null;
 }
 
 const BATCH_POLL_INTERVAL_MS = 900;
@@ -208,7 +205,6 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
           organisationId: request.organisation_id,
           requestId: request.id,
           questionId,
-          answer: answers[question.id] ?? null,
           endUserType: "Student",
           useMock: false,
         });
@@ -225,7 +221,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         setHintLoadingById((prev) => ({ ...prev, [question.id]: false }));
       }
     },
-    [answers, hintLoadingById, request.id, request.organisation_id, setQuestionHint]
+    [hintLoadingById, request.id, request.organisation_id, setQuestionHint]
   );
 
   const loadPage = useCallback(
@@ -316,35 +312,19 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         return;
       }
 
-      void persistAnswerForQuestion(currentQuestion);
+      await persistAnswerForQuestion(currentQuestion);
       setIsSubmittingExam(true);
 
       try {
         const allQuestions = await ensureAllQuestionsLoaded();
-        const questionMap = new Map(allQuestions.map((question) => [question.id, question]));
         const answeredEntries = Object.entries(answers).filter(
           ([, value]) => value.trim().length > 0
         );
-        const gradableEntries = answeredEntries.filter(([questionId]) => {
-          const question = questionMap.get(questionId);
-          return question?.kind === "mcq";
-        });
-        const correctCount = gradableEntries.filter(([questionId, answer]) => {
-          const question = questionMap.get(questionId);
-          return question?.correctOptionId === answer;
-        }).length;
-        const scorePercent =
-          gradableEntries.length > 0
-            ? Math.round((correctCount / gradableEntries.length) * 100)
-            : null;
 
         setReviewQuestions(allQuestions);
         setSummary({
           answeredCount: answeredEntries.length,
           totalQuestions: batchState.totalQuestions,
-          gradableCount: gradableEntries.length,
-          correctCount,
-          scorePercent,
         });
 
         if (reason === "timeout") {
@@ -490,6 +470,10 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   };
 
   if (summary) {
+    const submittedCount = Object.entries(answers).filter(
+      ([questionId, answer]) => answer.trim().length > 0 && savedAnswers[questionId] === answer
+    ).length;
+
     return (
       <div className="space-y-4">
         <Card className="border-borderColorPrimary bg-backgroundSecondary">
@@ -501,7 +485,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
             <CardDescription>{request.title}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
                 <p className="text-xs text-muted-foreground">Answered</p>
                 <p className="text-lg font-semibold">
@@ -509,18 +493,12 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 </p>
               </div>
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                <p className="text-xs text-muted-foreground">MCQ Graded</p>
-                <p className="text-lg font-semibold">{summary.gradableCount}</p>
+                <p className="text-xs text-muted-foreground">Submitted</p>
+                <p className="text-lg font-semibold">{submittedCount}</p>
               </div>
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                <p className="text-xs text-muted-foreground">Correct</p>
-                <p className="text-lg font-semibold">{summary.correctCount}</p>
-              </div>
-              <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                <p className="text-xs text-muted-foreground">Score</p>
-                <p className="text-lg font-semibold">
-                  {summary.scorePercent === null ? "N/A" : `${summary.scorePercent}%`}
-                </p>
+                <p className="text-xs text-muted-foreground">Status</p>
+                <p className="text-sm font-semibold">Awaiting grading</p>
               </div>
             </div>
 
@@ -535,15 +513,13 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
           <CardHeader>
             <CardTitle className="text-lg">Answer Review</CardTitle>
             <CardDescription>
-              Read-only review of your responses
-              {request.allows_explanation ? " with explanations." : "."}
+              Read-only review of your responses. Results will appear after grading.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {reviewQuestions.map((question) => {
               const selectedRaw = answers[question.id];
               const selectedOption = question.options.find((option) => option.id === selectedRaw) ?? null;
-              const isMcqCorrect = question.kind === "mcq" && selectedRaw === question.correctOptionId;
 
               return (
                 <div
@@ -557,15 +533,13 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                     <div className="mt-2 space-y-1">
                       {question.options.map((option) => {
                         const isSelected = selectedRaw === option.id;
-                        const isCorrectOption = option.id === question.correctOptionId;
 
                         return (
                           <div
                             key={option.id}
                             className={cn(
                               "rounded-md border px-2 py-1.5 text-xs",
-                              isCorrectOption && "border-primary/70 bg-secondary/70",
-                              isSelected && !isCorrectOption && "border-destructive/40 bg-destructive/10"
+                              isSelected && "border-primary/70 bg-secondary/70"
                             )}
                           >
                             <span className="font-medium">{option.id}.</span> {option.text}
@@ -583,7 +557,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                     {question.kind === "mcq" ? (
                       <>
                         Your answer: {selectedOption ? `${selectedOption.id}` : "Not answered"} | Status:{" "}
-                        {selectedRaw ? (isMcqCorrect ? "Correct" : "Incorrect") : "Not answered"}
+                        {selectedRaw ? "Submitted" : "Not answered"}
                       </>
                     ) : (
                       <>Response recorded.</>
@@ -618,13 +592,22 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 Question {currentQuestionNumber}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
               {secondsLeft !== null && (
                 <Badge variant="outline" className="px-2 py-1 text-sm">
                   <Clock3 className="mr-1 h-3.5 w-3.5" />
                   {formatTime(secondsLeft)}
                 </Badge>
               )}
+              {currentQuestion && answers[currentQuestion.id] ? (
+                <Badge variant="secondary" className="px-2 py-1 text-xs">
+                  {savingAnswerById[currentQuestion.id]
+                    ? "Saving answer..."
+                    : savedAnswers[currentQuestion.id] === answers[currentQuestion.id]
+                      ? "Answer submitted"
+                      : "Answer not submitted"}
+                </Badge>
+              ) : null}
               <Button
                 variant="destructive"
                 size="sm"
@@ -722,7 +705,9 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                     {revealedHints[currentQuestion.id] && currentQuestion.hint ? (
                       <Alert className="border-borderColorPrimary bg-background">
                         <AlertTitle>Hint</AlertTitle>
-                        <AlertDescription>{currentQuestion.hint}</AlertDescription>
+                        <AlertDescription className="whitespace-pre-line">
+                          {currentQuestion.hint}
+                        </AlertDescription>
                       </Alert>
                     ) : null}
                   </div>
@@ -765,6 +750,10 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 const loaded = isQuestionLoaded(questionNumber);
                 const question = getQuestionByNumber(questionNumber);
                 const answered = question ? Boolean(answers[question.id]?.trim()) : false;
+                const submitted = question
+                  ? Boolean(savedAnswers[question.id] && savedAnswers[question.id] === answers[question.id])
+                  : false;
+                const isSaving = question ? Boolean(savingAnswerById[question.id]) : false;
                 const active = questionNumber === currentQuestionNumber;
 
                 return (
@@ -775,11 +764,20 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                     disabled={!loaded || isWaitingForBatch || isSubmittingExam}
                     className={cn(
                       "rounded-md border-2 border-borderColorPrimary text-xs font-medium",
-                      answered && !active && "border-none bg-green-500/30",
+                      submitted && !active && "border-emerald-500/70 bg-emerald-500/15",
+                      answered && !submitted && !active && "border-amber-400/60 bg-amber-500/10",
+                      isSaving && "border-sky-400/60 bg-sky-500/10",
                       !loaded && "cursor-not-allowed border-dashed text-muted-foreground"
                     )}
                   >
-                    {loaded ? questionNumber : "..."}
+                    <span className="flex items-center justify-center gap-1">
+                      {loaded ? questionNumber : "..."}
+                      {submitted ? (
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                      ) : isSaving ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-sky-500" />
+                      ) : null}
+                    </span>
                   </Button>
                 );
               })}
