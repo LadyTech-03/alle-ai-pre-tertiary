@@ -56,11 +56,10 @@ export interface EduQuestionRequestsResponse {
   meta: PaginationMeta;
 }
 
-export interface GetQuestionRequestsParams {
+export interface GetQuestionRequestParams {
   organisationId: number | string;
-  endUserType: EndUserType;
-  page?: number;
-  perPage?: number;
+  requestId: number | string;
+  endUserType?: EndUserType;
   useMock?: boolean;
 }
 
@@ -515,37 +514,33 @@ const buildQuestionBatch = (session: MockSessionState, page: number): QuestionBa
 };
 
 export const eduQuestionRequestsApi = {
-  getQuestionRequests: async ({
+  getQuestionRequest: async ({
     organisationId,
-    endUserType,
-    page = 1,
-    perPage = 15,
+    requestId,
+    endUserType = "Student",
     useMock,
-  }: GetQuestionRequestsParams): Promise<EduQuestionRequestsResponse> => {
+  }: GetQuestionRequestParams): Promise<EduQuestionRequest> => {
     const shouldUseMock = useMock ?? useMockByDefault();
 
     if (shouldUseMock) {
       await sleep(MOCK_DELAY_MS);
-      const sorted = [...mockQuestionRequests].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      return buildMockResponse(sorted, organisationId, page, perPage);
+      const match = mockQuestionRequests.find((request) => request.id === Number(requestId));
+      if (!match) {
+        throw new Error("Question request not found");
+      }
+      return match;
     }
 
-    const response = await api.get<EduQuestionRequestsResponse>(
-      `/organisations/${organisationId}/edu-question-requests`,
+    const response = await api.get<Record<string, any>>(
+      `/organisations/${organisationId}/edu-question-request/${requestId}`,
       {
         headers: {
           EndUserType: endUserType,
         },
-        params: {
-          page,
-          per_page: perPage,
-        },
       }
     );
 
-    return response.data;
+    return response.data?.question_request ?? response.data?.data ?? response.data;
   },
 
   createQuestionRequest: async (

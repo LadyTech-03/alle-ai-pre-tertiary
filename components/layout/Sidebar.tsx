@@ -82,7 +82,7 @@ export function Sidebar() {
   const { isOpen, setCurrentPage, toggle, setCurrentConversationLink, setSectionId } = useSidebarStore();
   const pathname = usePathname();
   const router = useRouter();
-  const isExamPrepPage = pathname === "/exam-prep";
+  const isExamPrepPage = pathname.startsWith("/exam-prep");
   const isSubjectsPage = pathname === "/project";
   const isLessonNotePage = pathname === "/lesson-notes";
   const isMobile = useMediaQuery('(max-width: 1024px)');

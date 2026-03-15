@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ComponentType } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,16 +48,14 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useOrgSessionStore } from "@/stores";
+import { useExamSessionDraftStore } from "@/stores/examSessionDraftStore";
 import {
   eduQuestionRequestsApi,
-  type EduQuestionRequest,
-  type QuestionBatchResponse,
   type QuestionRequestType,
 } from "@/lib/api/eduQuestionRequests";
 import type { StudentDifficulty, StudentExamMode, SubjectOption } from "./types";
-import { StudentExamSession } from "./StudentExamSession";
-import { StudentFlashcardsSession } from "./StudentFlashcardsSession";
 
+const DEFAULT_BATCH_SIZE = 5;
 const studentModeValues = ["flashcards", "theory", "mcq"] as const;
 const difficultyValues = ["adaptive", "easy", "medium", "hard"] as const;
 const focusValues = ["mixed", "weak", "recent"] as const;
@@ -144,12 +143,6 @@ interface StudentExamPrepProps {
   subjects: SubjectOption[];
 }
 
-interface PreparedSession {
-  mode: StudentExamMode;
-  request: EduQuestionRequest;
-  initialBatch: QuestionBatchResponse;
-}
-
 interface PendingExamConfig {
   mode: StudentExamMode;
   modeLabel: string;
@@ -208,16 +201,15 @@ const formatSessionDuration = (seconds: number | null) => {
   return `${totalMinutes} minutes`;
 };
 
-const DEFAULT_BATCH_SIZE = 5;
-
 export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
+  const router = useRouter();
   const { orgId } = useOrgSessionStore();
+  const setDraft = useExamSessionDraftStore((state) => state.setDraft);
   const activeOrgId = orgId ?? "1";
   const [isCreatingRequest, setIsCreatingRequest] = useState(false);
   const [pendingConfig, setPendingConfig] = useState<PendingExamConfig | null>(null);
   const [pendingTitle, setPendingTitle] = useState("");
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
-  const [activeSession, setActiveSession] = useState<PreparedSession | null>(null);
 
   const form = useForm<StudentPrepFormValues>({
     resolver: zodResolver(studentPrepSchema),
@@ -301,7 +293,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
         useMock: false,
       });
 
-      const requestWithSubject: EduQuestionRequest = {
+      const requestWithSubject = {
         ...request,
         course_name: pendingConfig.subject.name,
       };
@@ -314,15 +306,18 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
         endUserType: "Student",
         totalQuestions: request.number,
         subjectId: request.course_uuid,
-        subjectName: pendingConfig.subject.name,
+        subjectName: requestWithSubject.course_name ?? "Selected Subject",
         useMock: false,
       });
 
-      setActiveSession({
+      setDraft(String(request.id), {
         mode: pendingConfig.mode,
         request: requestWithSubject,
         initialBatch,
       });
+
+      router.push(`/exam-prep/${request.id}`);
+
       setPendingConfig(null);
       setPendingTitle("");
       setIsInstructionsOpen(false);
@@ -340,26 +335,6 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
       setPendingTitle("");
     }
   };
-
-  if (activeSession) {
-    if (activeSession.mode === "flashcards") {
-      return (
-        <StudentFlashcardsSession
-          request={activeSession.request}
-          initialBatch={activeSession.initialBatch}
-          onExit={() => setActiveSession(null)}
-        />
-      );
-    }
-
-    return (
-      <StudentExamSession
-        request={activeSession.request}
-        initialBatch={activeSession.initialBatch}
-        onExit={() => setActiveSession(null)}
-      />
-    );
-  }
 
   return (
     <>
