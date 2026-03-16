@@ -95,6 +95,8 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   const [reviewQuestions, setReviewQuestions] = useState<GeneratedExamQuestion[]>([]);
   const [isExitPromptOpen, setIsExitPromptOpen] = useState(false);
   const [isSubmitPromptOpen, setIsSubmitPromptOpen] = useState(false);
+  const [attemptId, setAttemptId] = useState<number | null>(null);
+  const [isAttemptLoading, setIsAttemptLoading] = useState(true);
 
   const currentPage = Math.ceil(currentQuestionNumber / batchState.pageSize);
   const currentIndexInPage = (currentQuestionNumber - 1) % batchState.pageSize;
@@ -143,6 +145,39 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     }));
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const createAttempt = async () => {
+      setIsAttemptLoading(true);
+      try {
+        const attempt = await eduQuestionRequestsApi.createQuestionAttempt({
+          organisationId: request.organisation_id,
+          requestId: request.id,
+          endUserType: "Student",
+          useMock: false,
+        });
+        if (!cancelled) {
+          setAttemptId(attempt.id);
+        }
+      } catch {
+        if (!cancelled) {
+          toast.error("Could not start this attempt. Answers may not save.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAttemptLoading(false);
+        }
+      }
+    };
+
+    void createAttempt();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [request.id, request.organisation_id]);
+
   const persistAnswerForQuestion = useCallback(
     async (question: GeneratedExamQuestion | null) => {
       if (!question) {
@@ -158,13 +193,17 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         return;
       }
 
+      if (!attemptId) {
+        return;
+      }
+
       setSavingAnswerById((prev) => ({ ...prev, [question.id]: true }));
 
       try {
         const questionId = question.questionId ?? question.id;
         await eduQuestionRequestsApi.saveQuestionAnswer({
           organisationId: request.organisation_id,
-          requestId: request.id,
+          attemptId,
           questionId,
           answer,
           endUserType: "Student",
@@ -177,7 +216,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         setSavingAnswerById((prev) => ({ ...prev, [question.id]: false }));
       }
     },
-    [answers, request.id, request.organisation_id, savedAnswers, savingAnswerById]
+    [answers, attemptId, request.organisation_id, savedAnswers, savingAnswerById]
   );
 
   const setQuestionHint = useCallback((questionId: string, hint: string) => {
@@ -198,12 +237,16 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         return;
       }
 
+      if (!attemptId) {
+        return;
+      }
+
       setHintLoadingById((prev) => ({ ...prev, [question.id]: true }));
       try {
         const questionId = question.questionId ?? question.id;
         const hint = await eduQuestionRequestsApi.requestQuestionHint({
           organisationId: request.organisation_id,
-          requestId: request.id,
+          attemptId,
           questionId,
           endUserType: "Student",
           useMock: false,
@@ -221,7 +264,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         setHintLoadingById((prev) => ({ ...prev, [question.id]: false }));
       }
     },
-    [hintLoadingById, request.id, request.organisation_id, setQuestionHint]
+    [attemptId, hintLoadingById, request.organisation_id, setQuestionHint]
   );
 
   const loadPage = useCallback(
@@ -575,6 +618,23 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isAttemptLoading) {
+    return (
+      <div className="space-y-4">
+        <Card className="border-borderColorPrimary bg-muted/80">
+          <CardContent className="p-6">
+            <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-borderColorPrimary bg-background">
+              <div className="text-center text-sm text-muted-foreground">
+                <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                Preparing your exam session...
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

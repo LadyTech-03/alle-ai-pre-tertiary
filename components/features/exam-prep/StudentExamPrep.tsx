@@ -370,8 +370,8 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                               className={cn(
                                 "flex items-center justify-between rounded-lg border p-4 text-left border-borderColorPrimary",
                                 active
-                                  ? "border-emerald-500/40 bg-emerald-500/5"
-                                  : "hover:bg-accent"
+                                  ? ""
+                                  : ""
                               )}
                             >
                               <p className="text-sm font-semibold">{mode.label}</p>
@@ -490,7 +490,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                       <FormItem className="space-y-3 rounded-lg border border-borderColorPrimary bg-background p-4">
                         <div className="flex items-center justify-between">
                           <FormLabel className="text-xs text-muted-foreground">Number of questions</FormLabel>
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold">
+                          <span className="px-2 py-0.5 text-base font-semibold">
                             {displayValue}
                           </span>
                         </div>
@@ -523,10 +523,10 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
 
                 <div
                   className={cn(
-                    "space-y-4 rounded-lg border p-4 transition-colors",
+                    "space-y-4 rounded-lg border p-4 transition-colors border-borderColorPrimary",
                     values.timedMode
-                      ? "border-emerald-500/40 bg-emerald-500/5"
-                      : "border-borderColorPrimary bg-background"
+                      ? ""
+                      : ""
                   )}
                 >
                   <FormField
@@ -538,12 +538,12 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                           <div>
                             <FormLabel className="text-xs text-muted-foreground">Time limit</FormLabel>
                             <p className="text-sm font-semibold">
-                              {field.value ? `${resolvedDuration} minutes` : "Untimed session"}
+                              {field.value ? `${resolvedDuration} minutes` : "Not set"}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-[11px] text-muted-foreground">
-                              {field.value ? "Timed" : "No time limit"}
+                              {field.value ? "On" : "Off"}
                             </span>
                             <Switch
                               checked={field.value}
@@ -562,54 +562,57 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="durationMinutes"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormControl>
-                          <Slider
-                            min={DURATION_MIN}
-                            max={DURATION_MAX}
-                            step={DURATION_STEP}
-                            value={[Number.isFinite(field.value) ? field.value : DURATION_MIN]}
-                            onValueChange={([value]) => {
-                              field.onChange(value);
-                              if (!values.timedMode) {
-                                form.setValue("timedMode", true, {
-                                  shouldDirty: true,
-                                  shouldValidate: true,
-                                });
-                              }
-                            }}
-                            disabled={!values.timedMode}
-                          />
-                        </FormControl>
-                        {/* <div className="flex flex-wrap gap-2">
-                          {DURATION_PRESETS.map((preset) => (
-                            <Button
-                              key={preset}
-                              type="button"
-                              size="sm"
-                              variant={
-                                resolvedDuration === preset && values.timedMode ? "secondary" : "outline"
-                              }
-                              onClick={() => {
-                                field.onChange(preset);
-                                form.setValue("timedMode", true, {
-                                  shouldDirty: true,
-                                  shouldValidate: true,
-                                });
+                  {values.timedMode && (
+                    <FormField
+                      control={form.control}
+                      name="durationMinutes"
+                      render={({ field }) => (
+                        <FormItem className="space-y-3">
+                          <FormControl>
+                            <Slider
+                              min={DURATION_MIN}
+                              max={DURATION_MAX}
+                              step={DURATION_STEP}
+                              value={[Number.isFinite(field.value) ? field.value : DURATION_MIN]}
+                              onValueChange={([value]) => {
+                                field.onChange(value);
+                                if (!values.timedMode) {
+                                  form.setValue("timedMode", true, {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  });
+                                }
                               }}
-                            >
-                              {preset}m
-                            </Button>
-                          ))}
-                        </div> */}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                              disabled={!values.timedMode}
+                            />
+                          </FormControl>
+                          {/* <div className="flex flex-wrap gap-2">
+                            {DURATION_PRESETS.map((preset) => (
+                              <Button
+                                key={preset}
+                                type="button"
+                                size="sm"
+                                variant={
+                                  resolvedDuration === preset && values.timedMode ? "secondary" : "outline"
+                                }
+                                onClick={() => {
+                                  field.onChange(preset);
+                                  form.setValue("timedMode", true, {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  });
+                                }}
+                              >
+                                {preset}m
+                              </Button>
+                            ))}
+                          </div> */}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
                 </div>
               </div>
 
@@ -622,10 +625,10 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                     return (
                       <FormItem
                         className={cn(
-                          "space-y-3 rounded-lg border p-4 transition-colors",
+                          "space-y-3 rounded-lg border p-4 transition-colors border-borderColorPrimary",
                           hintValue > 0
-                            ? "border-emerald-500/40 bg-emerald-500/5"
-                            : "border-borderColorPrimary bg-background"
+                            ? ""
+                            : ""
                         )}
                       >
                         <div className="flex items-center justify-between gap-3">
@@ -670,10 +673,10 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
                   render={({ field }) => (
                     <FormItem
                       className={cn(
-                        "rounded-lg border p-4 transition-colors",
+                        "rounded-lg border p-4 transition-colors border-borderColorPrimary",
                         field.value
-                          ? "border-emerald-500/40 bg-emerald-500/5"
-                          : "border-borderColorPrimary bg-background"
+                          ? ""
+                          : ""
                       )}
                     >
                       <div className="flex items-center justify-between gap-3">

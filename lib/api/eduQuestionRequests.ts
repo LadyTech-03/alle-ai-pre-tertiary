@@ -161,16 +161,27 @@ interface EduGeneratedQuestionResponse {
 
 export interface SaveQuestionAnswerPayload {
   organisationId: number | string;
-  requestId: number | string;
+  attemptId: number | string;
   questionId: number | string;
   answer: string | null;
   endUserType?: EndUserType;
   useMock?: boolean;
 }
 
-export interface RequestQuestionHintPayload {
+export interface CreateQuestionAttemptPayload {
   organisationId: number | string;
   requestId: number | string;
+  endUserType?: EndUserType;
+  useMock?: boolean;
+}
+
+export interface CreateQuestionAttemptResponse {
+  id: number;
+}
+
+export interface RequestQuestionHintPayload {
+  organisationId: number | string;
+  attemptId: number | string;
   questionId: number | string;
   endUserType?: EndUserType;
   useMock?: boolean;
@@ -722,9 +733,39 @@ export const eduQuestionRequestsApi = {
     };
   },
 
-  saveQuestionAnswer: async ({
+  createQuestionAttempt: async ({
     organisationId,
     requestId,
+    endUserType = "Student",
+    useMock,
+  }: CreateQuestionAttemptPayload): Promise<CreateQuestionAttemptResponse> => {
+    const shouldUseMock = useMock ?? useMockByDefault();
+    if (shouldUseMock) {
+      await sleep(MOCK_DELAY_MS);
+      return { id: Math.floor(Math.random() * 9000) + 1000 };
+    }
+
+    const response = await api.post<{ status: boolean; data?: { id?: number } }>(
+      `/organisations/${organisationId}/edu-question-request/${requestId}/attempt`,
+      {},
+      {
+        headers: {
+          EndUserType: endUserType,
+        },
+      }
+    );
+
+    const attemptId = response.data?.data?.id;
+    if (!attemptId) {
+      throw new Error("Attempt ID missing from response");
+    }
+
+    return { id: attemptId };
+  },
+
+  saveQuestionAnswer: async ({
+    organisationId,
+    attemptId,
     questionId,
     answer,
     endUserType = "Student",
@@ -736,10 +777,10 @@ export const eduQuestionRequestsApi = {
       return;
     }
 
-    console.log('Saving question answer:', { organisationId, requestId, questionId, answer });
+    console.log('Saving question answer:', { organisationId, attemptId, questionId, answer });
 
     await api.post(
-      `/organisations/${organisationId}/edu-question-attempt/${requestId}/answer`,
+      `/organisations/${organisationId}/edu-question-attempt/${attemptId}/answer`,
       {
         question_id: questionId,
         answer,
@@ -754,7 +795,7 @@ export const eduQuestionRequestsApi = {
 
   requestQuestionHint: async ({
     organisationId,
-    requestId,
+    attemptId,
     questionId,
     endUserType = "Student",
     useMock,
@@ -766,7 +807,7 @@ export const eduQuestionRequestsApi = {
     }
 
     const response = await api.post<Record<string, any>>(
-      `/organisations/${organisationId}/edu-question-attempt/${requestId}/hint`,
+      `/organisations/${organisationId}/edu-question-attempt/${attemptId}/hint`,
       {
         question_id: questionId,
       },
