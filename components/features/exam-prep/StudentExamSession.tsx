@@ -27,7 +27,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock3,
-  Loader2,
+  Loader,
   Lightbulb,
 } from "lucide-react";
 
@@ -499,17 +499,13 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   if (summary) {
     return (
       <div className="space-y-4">
-        <Card className="border-borderColorPrimary bg-backgroundSecondary">
+        <Card className="border-borderColorPrimary bg-muted/80">
           <CardHeader>
-            <Badge variant="secondary" className="w-fit px-2 py-0.5 text-[10px]">
-              RESULTS READY
-            </Badge>
-            <CardTitle className="mt-2 text-xl">Quiz Results</CardTitle>
+            <CardTitle className="mt-2 text-xl">Results</CardTitle>
             <CardDescription>{request.title}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-borderColorPrimary bg-background px-4 py-4 text-center">
-              <p className="text-xs text-muted-foreground">Score</p>
               <p className="text-3xl font-semibold">{summary.scorePercent}%</p>
               <p className="text-xs text-muted-foreground">
                 {summary.correctAnswers} correct out of {summary.totalQuestions}
@@ -527,7 +523,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 <p className="text-lg font-semibold">{summary.correctAnswers}</p>
               </div>
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-xs text-muted-foreground">Total Questions</p>
                 <p className="text-lg font-semibold">{summary.totalQuestions}</p>
               </div>
               {summary.remainingTime !== null ? (
@@ -546,8 +542,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 View Questions and Answers
               </Button>
               <Button onClick={onExit}>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Back to Exam/Test Prep Menu
+                Back to Exam Prep
               </Button>
             </div>
           </CardContent>
@@ -563,8 +558,8 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
           <CardContent className="p-6">
             <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-borderColorPrimary bg-background">
               <div className="text-center text-sm text-muted-foreground">
-                <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
-                Preparing your exam session...
+                <Loader className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                Loading your questions ...
               </div>
             </div>
           </CardContent>
@@ -591,7 +586,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                   {formatTime(secondsLeft)}
                 </Badge>
               )}
-              {currentQuestion && answers[currentQuestion.id] ? (
+              {/* {currentQuestion && answers[currentQuestion.id] ? (
                 <Badge variant="secondary" className="px-2 py-1 text-xs">
                   {savingAnswerById[currentQuestion.id]
                     ? "Saving answer..."
@@ -599,7 +594,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                       ? "Answer submitted"
                       : "Answer not submitted"}
                 </Badge>
-              ) : null}
+              ) : null} */}
               <Button
                 variant="destructive"
                 size="sm"
@@ -628,15 +623,15 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
             {isSubmittingExam ? (
               <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-borderColorPrimary bg-background">
                 <div className="text-center text-sm text-muted-foreground">
-                  <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                  <Loader className="mx-auto mb-2 h-5 w-5 animate-spin" />
                   Submitting exam and preparing review...
                 </div>
               </div>
             ) : isWaitingForBatch || !currentQuestion ? (
               <div className="flex min-h-[220px] items-center justify-center rounded-lg border border-borderColorPrimary bg-background">
                 <div className="text-center text-sm text-muted-foreground">
-                  <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
-                  Loading next question batch...
+                  <Loader className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                  Loading...
                 </div>
               </div>
             ) : (
@@ -676,7 +671,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                 {request.hints_count && request.hints_count > 0 && currentQuestion ? (
                   <div className="space-y-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => {
                         if (currentQuestion.hint) {
@@ -687,7 +682,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                       }}
                       disabled={hintLoadingById[currentQuestion.id]}
                     >
-                      <Lightbulb className="mr-2 h-4 w-4" />
+                      <Lightbulb className="mr-2 h-4 w-4 text-yellow-500 hover:text-yellow-600" />
                       {hintLoadingById[currentQuestion.id]
                         ? "Loading hint..."
                         : revealedHints[currentQuestion.id]
@@ -756,7 +751,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                     disabled={!loaded || isWaitingForBatch || isSubmittingExam}
                     className={cn(
                       "rounded-md border-2 border-borderColorPrimary text-xs font-medium",
-                      submitted && !active && "border-emerald-500/70 bg-emerald-500/15",
+                      submitted && !active && "border-green-500/20 bg-green-500/30",
                       answered && !submitted && !active && "border-amber-400/60 bg-amber-500/10",
                       isSaving && "border-sky-400/60 bg-sky-500/10",
                       !loaded && "cursor-not-allowed border-dashed text-muted-foreground"
@@ -764,11 +759,11 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                   >
                     <span className="flex items-center justify-center gap-1">
                       {loaded ? questionNumber : "..."}
-                      {submitted ? (
-                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                      {/* {submitted ? (
+                        ''
                       ) : isSaving ? (
-                        <Loader2 className="h-3 w-3 animate-spin text-sky-500" />
-                      ) : null}
+                        <Loader className="h-3 w-3 animate-spin text-sky-500" />
+                      ) : null} */}
                     </span>
                   </Button>
                 );
