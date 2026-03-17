@@ -555,9 +555,6 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-borderColorPrimary bg-background px-4 py-4 text-center">
               <p className="text-3xl font-semibold">{summary.scorePercent}%</p>
-              <p className="text-xs text-muted-foreground">
-                {summary.correctAnswers} correct out of {summary.totalQuestions}
-              </p>
             </div>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
@@ -606,7 +603,6 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
             <CardHeader>
               <CardTitle className="text-lg">Questions and Answers</CardTitle>
               <CardDescription>
-                Review your answers alongside the correct ones.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -632,7 +628,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                       className="rounded-lg border border-borderColorPrimary bg-background px-4 py-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs text-muted-foreground">Question {index + 1}</p>
+                        <p className="text-xs text-muted-foreground font-semibold">Question {index + 1}</p>
                         <Badge
                           variant="secondary"
                           className={cn(
@@ -674,25 +670,25 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                           })}
                         </div>
                       ) : (
-                        <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                          <p>Your answer: {userAnswer ?? "Not answered"}</p>
+                        <div className="mt-3 space-y-1 text-base text-muted-foreground">
+                          <p><span className="font-semibold text-foreground">Your answer:</span> {userAnswer ?? "Not answered"}</p>
                           {!isCorrect && correctAnswer ? (
-                            <p>Correct answer: {correctAnswer}</p>
+                            <p><span className="font-semibold text-foreground">Correct answer:</span> {correctAnswer}</p>
                           ) : null}
                         </div>
                       )}
 
-                      {!isCorrect && correctOption ? (
+                      {/* {!isCorrect && correctOption ? (
                         <div className="mt-3 text-xs text-muted-foreground">
                           <span className="font-medium text-foreground">Correct answer:</span> {correctOption}
                         </div>
-                      ) : null}
+                      ) : null} */}
 
-                      {isCorrect && userOption ? (
+                      {/* {isCorrect && userOption ? (
                         <div className="mt-3 text-xs text-muted-foreground">
                           <span className="font-medium text-foreground">Your answer:</span> {userOption}
                         </div>
-                      ) : null}
+                      ) : null} */}
                     </div>
                   );
                 })
@@ -847,12 +843,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
                           : "Hint"}
                     </Button>
                     {revealedHints[currentQuestion.id] && currentQuestion.hint ? (
-                      <Alert className="border-borderColorPrimary bg-background">
-                        <AlertTitle>Hint</AlertTitle>
-                        <AlertDescription className="whitespace-pre-line">
-                          {currentQuestion.hint}
-                        </AlertDescription>
-                      </Alert>
+                      <span className="italic px-4 text-muted-foreground">{currentQuestion.hint}</span>
                     ) : null}
                   </div>
                 ) : null}
