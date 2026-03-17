@@ -179,6 +179,21 @@ export interface CreateQuestionAttemptResponse {
   id: number;
 }
 
+export interface FinishQuestionAttemptPayload {
+  organisationId: number | string;
+  attemptId: number | string;
+  endUserType?: EndUserType;
+  useMock?: boolean;
+}
+
+export interface FinishQuestionAttemptResponse {
+  id: number;
+  attempted_questions: number;
+  correct_answers: number;
+  total_questions: number;
+  remaining_time: number | null;
+}
+
 export interface RequestQuestionHintPayload {
   organisationId: number | string;
   attemptId: number | string;
@@ -761,6 +776,41 @@ export const eduQuestionRequestsApi = {
     }
 
     return { id: attemptId };
+  },
+
+  finishQuestionAttempt: async ({
+    organisationId,
+    attemptId,
+    endUserType = "Student",
+    useMock,
+  }: FinishQuestionAttemptPayload): Promise<FinishQuestionAttemptResponse> => {
+    const shouldUseMock = useMock ?? useMockByDefault();
+    if (shouldUseMock) {
+      await sleep(MOCK_DELAY_MS);
+      return {
+        id: Number(attemptId),
+        attempted_questions: Math.floor(Math.random() * 10) + 1,
+        correct_answers: Math.floor(Math.random() * 5) + 1,
+        total_questions: 30,
+        remaining_time: null,
+      };
+    }
+
+    const response = await api.post<{ status: boolean; data?: FinishQuestionAttemptResponse }>(
+      `/organisations/${organisationId}/edu-question-attempt/${attemptId}/finish`,
+      {},
+      {
+        headers: {
+          EndUserType: endUserType,
+        },
+      }
+    );
+
+    if (!response.data?.data) {
+      throw new Error("Finish response missing data");
+    }
+
+    return response.data.data;
   },
 
   saveQuestionAnswer: async ({

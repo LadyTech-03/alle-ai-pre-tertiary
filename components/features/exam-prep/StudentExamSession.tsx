@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -39,8 +38,12 @@ interface StudentExamSessionProps {
 }
 
 interface SessionSummary {
-  answeredCount: number;
+  attemptId: number;
+  attemptedQuestions: number;
+  correctAnswers: number;
   totalQuestions: number;
+  remainingTime: number | null;
+  scorePercent: number;
 }
 
 const BATCH_POLL_INTERVAL_MS = 900;
@@ -66,11 +69,6 @@ const formatTime = (seconds: number) => {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 };
 
-const flattenQuestions = (pages: Record<number, GeneratedExamQuestion[]>) =>
-  Object.values(pages)
-    .flat()
-    .sort((a, b) => a.order - b.order);
-
 export function StudentExamSession({ request, initialBatch, onExit }: StudentExamSessionProps) {
   const [questionPages, setQuestionPages] = useState<Record<number, GeneratedExamQuestion[]>>({
     [initialBatch.page]: initialBatch.data,
@@ -92,7 +90,6 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   const [isSubmittingExam, setIsSubmittingExam] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(request.time_limit);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
-  const [reviewQuestions, setReviewQuestions] = useState<GeneratedExamQuestion[]>([]);
   const [isExitPromptOpen, setIsExitPromptOpen] = useState(false);
   const [isSubmitPromptOpen, setIsSubmitPromptOpen] = useState(false);
   const [attemptId, setAttemptId] = useState<number | null>(null);
@@ -318,40 +315,14 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     [batchState.pageSize, questionPages, request.id]
   );
 
-  const ensureAllQuestionsLoaded = useCallback(async () => {
-    const pagesToLoad: number[] = [];
-    for (let page = 1; page <= batchState.totalPages; page += 1) {
-      const loadedPage = questionPages[page];
-      if (!loadedPage || loadedPage.length === 0) {
-        pagesToLoad.push(page);
-      }
-    }
-
-    if (pagesToLoad.length === 0) {
-      return flattenQuestions(questionPages);
-    }
-
-    const loadedResults = await Promise.all(
-      pagesToLoad.map((page) => loadPage(page, true))
-    );
-
-    const merged: Record<number, GeneratedExamQuestion[]> = {
-      ...questionPages,
-    };
-
-    pagesToLoad.forEach((page, index) => {
-      const pageData = loadedResults[index];
-      if (pageData && pageData.length > 0) {
-        merged[page] = pageData;
-      }
-    });
-
-    return flattenQuestions(merged);
-  }, [batchState.totalPages, loadPage, questionPages]);
-
   const submitExam = useCallback(
     async (reason: "manual" | "timeout") => {
       if (summary || isSubmittingExam) {
+        return;
+      }
+
+      if (!attemptId) {
+        toast.error("Attempt is not ready yet. Please try again.");
         return;
       }
 
@@ -359,15 +330,28 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
       setIsSubmittingExam(true);
 
       try {
-        const allQuestions = await ensureAllQuestionsLoaded();
         const answeredEntries = Object.entries(answers).filter(
           ([, value]) => value.trim().length > 0
         );
 
-        setReviewQuestions(allQuestions);
+        const result = await eduQuestionRequestsApi.finishQuestionAttempt({
+          organisationId: request.organisation_id,
+          attemptId,
+          endUserType: "Student",
+          useMock: false,
+        });
+        const scorePercent =
+          result.total_questions > 0
+            ? Math.round((result.correct_answers / result.total_questions) * 100)
+            : 0;
+
         setSummary({
-          answeredCount: answeredEntries.length,
-          totalQuestions: batchState.totalQuestions,
+          attemptId: result.id,
+          attemptedQuestions: result.attempted_questions ?? answeredEntries.length,
+          correctAnswers: result.correct_answers ?? 0,
+          totalQuestions: result.total_questions ?? batchState.totalQuestions,
+          remainingTime: result.remaining_time ?? null,
+          scorePercent,
         });
 
         if (reason === "timeout") {
@@ -382,11 +366,11 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
         setIsSubmittingExam(false);
       }
     },
-    [answers, batchState.totalQuestions, ensureAllQuestionsLoaded, isSubmittingExam, summary]
+    [answers, attemptId, batchState.totalQuestions, currentQuestion, isSubmittingExam, persistAnswerForQuestion, request.organisation_id, summary]
   );
 
   useEffect(() => {
-    if (secondsLeft === null || summary || isSubmittingExam) {
+    if (secondsLeft === null || summary || isSubmittingExam || isAttemptLoading) {
       return;
     }
 
@@ -402,7 +386,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     return () => {
       window.clearTimeout(timer);
     };
-  }, [isSubmittingExam, secondsLeft, submitExam, summary]);
+  }, [isAttemptLoading, isSubmittingExam, secondsLeft, submitExam, summary]);
 
   useEffect(() => {
     if (summary || isSubmittingExam) {
@@ -513,111 +497,59 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   };
 
   if (summary) {
-    const submittedCount = Object.entries(answers).filter(
-      ([questionId, answer]) => answer.trim().length > 0 && savedAnswers[questionId] === answer
-    ).length;
-
     return (
       <div className="space-y-4">
         <Card className="border-borderColorPrimary bg-backgroundSecondary">
           <CardHeader>
             <Badge variant="secondary" className="w-fit px-2 py-0.5 text-[10px]">
-              TEST COMPLETE
+              RESULTS READY
             </Badge>
-            <CardTitle className="mt-2 text-xl">Exam Submitted</CardTitle>
+            <CardTitle className="mt-2 text-xl">Quiz Results</CardTitle>
             <CardDescription>{request.title}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+            <div className="rounded-lg border border-borderColorPrimary bg-background px-4 py-4 text-center">
+              <p className="text-xs text-muted-foreground">Score</p>
+              <p className="text-3xl font-semibold">{summary.scorePercent}%</p>
+              <p className="text-xs text-muted-foreground">
+                {summary.correctAnswers} correct out of {summary.totalQuestions}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                <p className="text-xs text-muted-foreground">Answered</p>
+                <p className="text-xs text-muted-foreground">Attempted</p>
                 <p className="text-lg font-semibold">
-                  {summary.answeredCount}/{summary.totalQuestions}
+                  {summary.attemptedQuestions}
                 </p>
               </div>
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                <p className="text-xs text-muted-foreground">Submitted</p>
-                <p className="text-lg font-semibold">{submittedCount}</p>
+                <p className="text-xs text-muted-foreground">Correct</p>
+                <p className="text-lg font-semibold">{summary.correctAnswers}</p>
               </div>
               <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
-                <p className="text-xs text-muted-foreground">Status</p>
-                <p className="text-sm font-semibold">Awaiting grading</p>
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-lg font-semibold">{summary.totalQuestions}</p>
               </div>
+              {summary.remainingTime !== null ? (
+                <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Remaining Time</p>
+                  <p className="text-lg font-semibold">{formatTime(summary.remainingTime)}</p>
+                </div>
+              ) : null}
             </div>
 
-            <Button onClick={onExit} className="w-full">
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Back to Exam/Test Prep Menu
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-borderColorPrimary bg-backgroundSecondary">
-          <CardHeader>
-            <CardTitle className="text-lg">Answer Review</CardTitle>
-            <CardDescription>
-              Read-only review of your responses. Results will appear after grading.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {reviewQuestions.map((question) => {
-              const selectedRaw = answers[question.id];
-              const selectedOption = question.options.find((option) => option.id === selectedRaw) ?? null;
-
-              return (
-                <div
-                  key={question.id}
-                  className="rounded-lg border border-borderColorPrimary bg-background px-3 py-3"
-                >
-                  <p className="text-xs text-muted-foreground">Question {question.order}</p>
-                  <p className="mt-1 text-sm">{question.prompt}</p>
-
-                  {question.kind === "mcq" ? (
-                    <div className="mt-2 space-y-1">
-                      {question.options.map((option) => {
-                        const isSelected = selectedRaw === option.id;
-
-                        return (
-                          <div
-                            key={option.id}
-                            className={cn(
-                              "rounded-md border px-2 py-1.5 text-xs",
-                              isSelected && "border-primary/70 bg-secondary/70"
-                            )}
-                          >
-                            <span className="font-medium">{option.id}.</span> {option.text}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="mt-2 rounded-md border border-borderColorPrimary px-2 py-2 text-xs">
-                      {selectedRaw?.trim() ? selectedRaw : "No response submitted."}
-                    </div>
-                  )}
-
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    {question.kind === "mcq" ? (
-                      <>
-                        Your answer: {selectedOption ? `${selectedOption.id}` : "Not answered"} | Status:{" "}
-                        {selectedRaw ? "Submitted" : "Not answered"}
-                      </>
-                    ) : (
-                      <>Response recorded.</>
-                    )}
-                  </div>
-
-                  {request.allows_explanation ? (
-                    <div className="mt-2 rounded-md border border-borderColorPrimary bg-secondary/40 px-2 py-2">
-                      <p className="text-xs font-medium">Explanation</p>
-                      <p className="text-xs text-muted-foreground">
-                        {question.explanation ?? "Explanation not available for this item."}
-                      </p>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
+            <div className="grid gap-2 md:grid-cols-2">
+              <Button
+                variant="outline"
+                onClick={() => toast.info("Question review will be available next.")}
+              >
+                View Questions and Answers
+              </Button>
+              <Button onClick={onExit}>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Back to Exam/Test Prep Menu
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -862,7 +794,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
           <DialogHeader>
             <DialogTitle>End Test?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to end the test? You can always start a new test, but your current progress will be lost.
+              This will finish your attempt.
             </DialogDescription>
           </DialogHeader>
           {secondsLeft !== null ? (
@@ -879,10 +811,11 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
               variant="destructive"
               onClick={() => {
                 setIsExitPromptOpen(false);
-                onExit();
+                void submitExam("manual");
               }}
+              disabled={isSubmittingExam}
             >
-              End
+              End Test
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -893,7 +826,7 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
           <DialogHeader>
             <DialogTitle>Submit Test?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to submit the test? This will finalize your answers and you won&apos;t be able to make any changes.
+              This will finalize your answers.
             </DialogDescription>
           </DialogHeader>
           {secondsLeft !== null ? (
