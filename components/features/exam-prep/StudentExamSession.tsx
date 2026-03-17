@@ -20,6 +20,7 @@ import {
   eduQuestionRequestsApi,
   type EduQuestionRequest,
   type GeneratedExamQuestion,
+  type QuestionAttemptResponseItem,
   type QuestionBatchResponse,
 } from "@/lib/api/eduQuestionRequests";
 import {
@@ -29,6 +30,7 @@ import {
   Clock3,
   Loader,
   Lightbulb,
+  XCircle,
 } from "lucide-react";
 
 interface StudentExamSessionProps {
@@ -69,6 +71,16 @@ const formatTime = (seconds: number) => {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 };
 
+const getOptionKey = (option: string) => option.trim().charAt(0).toUpperCase();
+
+const findOptionByKey = (options: string[], key: string | null) => {
+  if (!key) {
+    return null;
+  }
+  const normalized = key.trim().toUpperCase();
+  return options.find((option) => getOptionKey(option) === normalized) ?? null;
+};
+
 export function StudentExamSession({ request, initialBatch, onExit }: StudentExamSessionProps) {
   const [questionPages, setQuestionPages] = useState<Record<number, GeneratedExamQuestion[]>>({
     [initialBatch.page]: initialBatch.data,
@@ -94,6 +106,9 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
   const [isSubmitPromptOpen, setIsSubmitPromptOpen] = useState(false);
   const [attemptId, setAttemptId] = useState<number | null>(null);
   const [isAttemptLoading, setIsAttemptLoading] = useState(true);
+  const [attemptResponses, setAttemptResponses] = useState<QuestionAttemptResponseItem[] | null>(null);
+  const [isResponsesLoading, setIsResponsesLoading] = useState(false);
+  const [isResponsesVisible, setIsResponsesVisible] = useState(false);
 
   const currentPage = Math.ceil(currentQuestionNumber / batchState.pageSize);
   const currentIndexInPage = (currentQuestionNumber - 1) % batchState.pageSize;
@@ -369,6 +384,39 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
     [answers, attemptId, batchState.totalQuestions, currentQuestion, isSubmittingExam, persistAnswerForQuestion, request.organisation_id, summary]
   );
 
+  const handleViewResponses = useCallback(async () => {
+    if (!summary || isResponsesLoading) {
+      return;
+    }
+
+    if (isResponsesVisible) {
+      setIsResponsesVisible(false);
+      return;
+    }
+
+    if (attemptResponses) {
+      setIsResponsesVisible(true);
+      return;
+    }
+
+    setIsResponsesLoading(true);
+    setIsResponsesVisible(true);
+    try {
+      const responses = await eduQuestionRequestsApi.getQuestionAttemptResponses({
+        organisationId: request.organisation_id,
+        attemptId: summary.attemptId,
+        endUserType: "Student",
+        useMock: false,
+      });
+      setAttemptResponses(responses);
+    } catch {
+      toast.error("Could not load questions and answers.");
+      setIsResponsesVisible(false);
+    } finally {
+      setIsResponsesLoading(false);
+    }
+  }, [attemptResponses, isResponsesLoading, isResponsesVisible, request.organisation_id, summary]);
+
   useEffect(() => {
     if (secondsLeft === null || summary || isSubmittingExam || isAttemptLoading) {
       return;
@@ -537,9 +585,14 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
             <div className="grid gap-2 md:grid-cols-2">
               <Button
                 variant="outline"
-                onClick={() => toast.info("Question review will be available next.")}
+                onClick={handleViewResponses}
+                disabled={isResponsesLoading}
               >
-                View Questions and Answers
+                {isResponsesLoading
+                  ? "Loading Questions..."
+                  : isResponsesVisible
+                    ? "Hide Questions and Answers"
+                    : "View Questions and Answers"}
               </Button>
               <Button onClick={onExit}>
                 Back to Exam Prep
@@ -547,6 +600,110 @@ export function StudentExamSession({ request, initialBatch, onExit }: StudentExa
             </div>
           </CardContent>
         </Card>
+
+        {isResponsesVisible ? (
+          <Card className="border-borderColorPrimary bg-backgroundSecondary">
+            <CardHeader>
+              <CardTitle className="text-lg">Questions and Answers</CardTitle>
+              <CardDescription>
+                Review your answers alongside the correct ones.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isResponsesLoading && !attemptResponses ? (
+                <div className="flex min-h-[160px] items-center justify-center rounded-lg border border-borderColorPrimary bg-background">
+                  <div className="text-center text-sm text-muted-foreground">
+                    <Loader className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                    Loading responses...
+                  </div>
+                </div>
+              ) : attemptResponses && attemptResponses.length > 0 ? (
+                attemptResponses.map((response, index) => {
+                  const options = response.edu_question?.options ?? [];
+                  const correctAnswer = response.edu_question?.answer ?? null;
+                  const userAnswer = response.answer ?? null;
+                  const correctOption = findOptionByKey(options, correctAnswer);
+                  const userOption = findOptionByKey(options, userAnswer);
+                  const isCorrect = Boolean(response.is_correct);
+
+                  return (
+                    <div
+                      key={response.id}
+                      className="rounded-lg border border-borderColorPrimary bg-background px-4 py-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">Question {index + 1}</p>
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "px-2 py-0.5 text-[10px]",
+                            isCorrect
+                              ? "border border-emerald-600/40 bg-emerald-500/10 text-emerald-600"
+                              : "border border-destructive/40 bg-destructive/10 text-destructive"
+                          )}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {isCorrect ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                            {isCorrect ? "Correct" : "Incorrect"}
+                          </span>
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-sm font-medium">{response.edu_question?.question}</p>
+
+                      {options.length ? (
+                        <div className="mt-3 grid gap-2">
+                          {options.map((option) => {
+                            const optionKey = getOptionKey(option);
+                            const isUser = userAnswer && optionKey === userAnswer.toUpperCase();
+                            const isAnswer = correctAnswer && optionKey === correctAnswer.toUpperCase();
+
+                            return (
+                              <div
+                                key={option}
+                                className={cn(
+                                  "rounded-md border px-3 py-2 text-xs",
+                                  isAnswer && "border-emerald-600/40 bg-emerald-500/10",
+                                  isUser && !isAnswer && "border-destructive/40 bg-destructive/10"
+                                )}
+                              >
+                                <span className="font-medium">{option}</span>
+                                {isAnswer ? <span className="ml-2 text-[11px] text-emerald-600">Correct answer</span> : null}
+                                {isUser && !isAnswer ? <span className="ml-2 text-[11px] text-destructive">Your answer</span> : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                          <p>Your answer: {userAnswer ?? "Not answered"}</p>
+                          {!isCorrect && correctAnswer ? (
+                            <p>Correct answer: {correctAnswer}</p>
+                          ) : null}
+                        </div>
+                      )}
+
+                      {!isCorrect && correctOption ? (
+                        <div className="mt-3 text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">Correct answer:</span> {correctOption}
+                        </div>
+                      ) : null}
+
+                      {isCorrect && userOption ? (
+                        <div className="mt-3 text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">Your answer:</span> {userOption}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="rounded-lg border border-borderColorPrimary bg-background px-3 py-3 text-xs text-muted-foreground">
+                  No responses available yet.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     );
   }

@@ -194,6 +194,38 @@ export interface FinishQuestionAttemptResponse {
   remaining_time: number | null;
 }
 
+export interface QuestionAttemptResponseQuestion {
+  id: number;
+  edu_question_request_id: number;
+  question: string;
+  options: string[];
+  points: string | number | null;
+  answer: string | null;
+  updated_at: string;
+  created_at: string;
+}
+
+export interface QuestionAttemptResponseItem {
+  id: number;
+  edu_question_request_attempt_id: number;
+  edu_question: QuestionAttemptResponseQuestion;
+  answer: string | null;
+  is_correct: number | boolean;
+  hints: string | null;
+  explanation: string | null;
+  score: string | number | null;
+  usage_cost: string | number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GetQuestionAttemptResponsesPayload {
+  organisationId: number | string;
+  attemptId: number | string;
+  endUserType?: EndUserType;
+  useMock?: boolean;
+}
+
 export interface RequestQuestionHintPayload {
   organisationId: number | string;
   attemptId: number | string;
@@ -811,6 +843,53 @@ export const eduQuestionRequestsApi = {
     }
 
     return response.data.data;
+  },
+
+  getQuestionAttemptResponses: async ({
+    organisationId,
+    attemptId,
+    endUserType = "Student",
+    useMock,
+  }: GetQuestionAttemptResponsesPayload): Promise<QuestionAttemptResponseItem[]> => {
+    const shouldUseMock = useMock ?? useMockByDefault();
+    if (shouldUseMock) {
+      await sleep(MOCK_DELAY_MS);
+      return [
+        {
+          id: 1,
+          edu_question_request_attempt_id: Number(attemptId),
+          edu_question: {
+            id: 1,
+            edu_question_request_id: 1,
+            question: "Sample question text",
+            options: ["A. Option 1", "B. Option 2", "C. Option 3", "D. Option 4"],
+            points: "1.00",
+            answer: "B",
+            updated_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+          },
+          answer: "A",
+          is_correct: 0,
+          hints: null,
+          explanation: null,
+          score: "0.00",
+          usage_cost: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+    }
+
+    const response = await api.get<{ data?: QuestionAttemptResponseItem[] }>(
+      `/organisations/${organisationId}/edu-question-attempt/${attemptId}/responses`,
+      {
+        headers: {
+          EndUserType: endUserType,
+        },
+      }
+    );
+
+    return response.data?.data ?? [];
   },
 
   saveQuestionAnswer: async ({
