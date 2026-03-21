@@ -64,6 +64,7 @@ import {
 import { useConversationStore } from "@/stores/models";
 import { historyApi } from "@/lib/api/history";
 import { projectApi } from "@/lib/api/project";
+import { eduQuestionRequestsApi, type EduQuestionRequest } from "@/lib/api/eduQuestionRequests";
 import { toast } from "sonner"
 import { authApi } from "@/lib/api/auth";
 import { TextStream } from "@/components/ui/text-stream";
@@ -100,6 +101,7 @@ export function Sidebar() {
   const { user, plan } = useAuthStore();
   const { setGenerationType, conversationId, clearConversation, setConversationId } = useConversationStore();
   const sessionUser = useOrgSessionStore((state) => state.sessionUser);
+  const orgId = useOrgSessionStore((state) => state.orgId);
 
   // Add confirmation dialog state
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
@@ -123,6 +125,8 @@ export function Sidebar() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
   const [shareLinkModalOpen, setShareLinkModalOpen] = useState(false);
+  const [examRequests, setExamRequests] = useState<EduQuestionRequest[]>([]);
+  const [isExamRequestsLoading, setIsExamRequestsLoading] = useState(false);
   // For tracking which projects are expanded in the sidebar
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
 
@@ -146,6 +150,20 @@ export function Sidebar() {
   // Get only the first 3 projects to display
   const visibleProjects = useMemo(() => projects.slice(0, 8), [projects]);
   const hasMoreProjects = projects.length > 8;
+  const visibleExamRequests = useMemo(() => examRequests.slice(0, 8), [examRequests]);
+
+  const formatExamType = (type: string) => {
+    if (type === "mcqs") return "MCQ";
+    if (type === "theory") return "Theory";
+    if (type === "flashcards") return "Flashcards";
+    return type.toUpperCase();
+  };
+
+  const formatExamDuration = (seconds: number | null) => {
+    if (!seconds) return;
+    const minutes = Math.max(1, Math.round(seconds / 60));
+    return `${minutes} min`;
+  };
 
   // Add a ref to track the last loading time to implement a cooldown
   const lastLoadTimeRef = useRef<number>(0);
@@ -229,6 +247,43 @@ export function Sidebar() {
       toggle();
     }
   }, [isMobile]);
+
+  useEffect(() => {
+    if (!isExamPrepPage) {
+      return;
+    }
+
+    let cancelled = false;
+    const activeOrgId = orgId ?? "1";
+
+    const loadExamRequests = async () => {
+      setIsExamRequestsLoading(true);
+      try {
+        const response = await eduQuestionRequestsApi.getQuestionRequests({
+          organisationId: activeOrgId,
+          endUserType: "Student",
+          useMock: false,
+        });
+        if (!cancelled) {
+          setExamRequests(response.data ?? []);
+        }
+      } catch {
+        if (!cancelled) {
+          setExamRequests([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsExamRequestsLoading(false);
+        }
+      }
+    };
+
+    loadExamRequests();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isExamPrepPage, orgId]);
 
   const handleNewChat = () => {
     // Clear the conversation link when starting a new chat
@@ -706,6 +761,64 @@ export function Sidebar() {
 
             {/* Scrollable content area */}
             <div className="flex-1 overflow-hidden flex flex-col mt-4 min-w-0">
+              {/* Exam Prep Section */}
+              {isExamPrepPage && (
+                <>
+                  <div className="flex-shrink-0 px-2">
+                    <div className="flex items-end justify-between mx-2 text-sm font-medium text-muted-foreground mb-2">
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="uppercase text-xs tracking-wide">Recent {visibleExamRequests.length > 1 ? "Tests" : "Test"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="flex-shrink-0 w-full max-h-[520px] overflow-y-auto overflow-x-hidden">
+                    <div className="w-full max-w-[98%] px-2 space-y-1 py-1">
+                      {isExamRequestsLoading ? (
+                        <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
+                          <Loader className="h-4 w-4 animate-spin text-muted-foreground mb-1" />
+                        </div>
+                      ) : visibleExamRequests.length > 0 ? (
+                        <>
+                          {visibleExamRequests.map((request) => {
+                            const isActive = pathname.startsWith(`/exam-prep/${request.id}`);
+
+                            return (
+                              <button
+                                key={request.id}
+                                type="button"
+                                onClick={() => router.push(`/exam-prep/${request.id}`)}
+                                className={cn(
+                                  "group relative w-full max-w-lg overflow-hidden flex items-center justify-between px-2 py-1.5 rounded-lg border transition-all duration-200 text-left",
+                                  isActive
+                                    ? "bg-secondary border-primary/20 shadow-sm"
+                                    : "bg-background hover:bg-secondary/50 border-border/40 hover:border-border"
+                                )}
+                              >
+                                <div className="flex flex-col min-w-0 overflow-hidden text-left flex-1 space-y-0.5">
+                                  <div className="text-xs font-bold text-foreground group-hover:text-foreground truncate max-w-full">
+                                    {request.title}
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground truncate">
+                                    {formatExamType(request.type)} - {request.number} questions
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1 text-[10px] text-muted-foreground">
+                                  <span>{formatExamDuration(request.time_limit)}</span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </>
+                      ) : (
+                        <div className="rounded-lg border border-borderColorPrimary bg-background px-2 py-2 text-xs text-muted-foreground">
+                          No exam sessions yet.
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </>
+              )}
 
               {/* Projects Section */}
               {(pathname.includes('chat') || pathname.includes('project')) && (

@@ -11,7 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   EuroIcon,
-  Loader2,
+  Loader,
   RefreshCw,
 } from "lucide-react";
 import NavigationContainer from "@/components/NavigationContainer";
@@ -266,7 +266,7 @@ const PricingPage = () => {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               {isLoadingRate ? (
                 <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader className="h-4 w-4 animate-spin" />
                   <span>Loading rates...</span>
                 </div>
               ) : (
@@ -315,7 +315,7 @@ const PricingPage = () => {
               continue delivering a smooth and dependable experience.
               {isLoadingRate && (
                 <span className="ml-2 inline-flex items-center text-xs text-muted-foreground/60">
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  <Loader className="h-3 w-3 animate-spin mr-1" />
                   Updating rates...
                 </span>
               )}

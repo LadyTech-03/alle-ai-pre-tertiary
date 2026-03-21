@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader } from "lucide-react";
 import { useOrgSessionStore, useSidebarStore } from "@/stores";
 import { useExamSessionDraftStore } from "@/stores/examSessionDraftStore";
 import {
@@ -123,7 +123,7 @@ export default function ExamPrepSessionPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
       </div>
     );
   }

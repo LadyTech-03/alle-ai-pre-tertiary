@@ -40,7 +40,7 @@ import {
   BrainCircuit,
   FileQuestion,
   Info,
-  Loader2,
+  Loader,
   Clock3,
   AlertTriangle,
   ShieldCheck,
@@ -696,7 +696,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
               <Button type="submit" className="w-full" disabled={isCreatingRequest}>
                 {isCreatingRequest ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
                     Generating Questions...
                   </>
                 ) : (
@@ -816,7 +816,7 @@ export function StudentExamPrep({ subjects }: StudentExamPrepProps) {
             >
               {isCreatingRequest ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
                   Creating...
                 </>
               ) : (

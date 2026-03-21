@@ -63,6 +63,14 @@ export interface GetQuestionRequestParams {
   useMock?: boolean;
 }
 
+export interface GetQuestionRequestsParams {
+  organisationId: number | string;
+  endUserType?: EndUserType;
+  page?: number;
+  perPage?: number;
+  useMock?: boolean;
+}
+
 export interface CreateQuestionRequestPayload {
   organisationId: number | string;
   title: string;
@@ -572,6 +580,36 @@ const buildQuestionBatch = (session: MockSessionState, page: number): QuestionBa
 };
 
 export const eduQuestionRequestsApi = {
+  getQuestionRequests: async ({
+    organisationId,
+    endUserType = "Student",
+    page = 1,
+    perPage = 15,
+    useMock,
+  }: GetQuestionRequestsParams): Promise<EduQuestionRequestsResponse> => {
+    const shouldUseMock = useMock ?? useMockByDefault();
+
+    if (shouldUseMock) {
+      await sleep(MOCK_DELAY_MS);
+      return buildMockResponse(mockQuestionRequests, organisationId, page, perPage);
+    }
+
+    const response = await api.get<EduQuestionRequestsResponse>(
+      `/organisations/${organisationId}/edu-question-requests`,
+      {
+        headers: {
+          EndUserType: endUserType,
+        },
+        params: {
+          page,
+          per_page: perPage,
+        },
+      }
+    );
+
+    return response.data;
+  },
+
   getQuestionRequest: async ({
     organisationId,
     requestId,

@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useProjectStore, useSidebarStore } from "@/stores";
 import { projectApi } from "@/lib/api/project";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Loader, GraduationCap, BrainCircuit, Users } from "lucide-react";
+import { Loader } from "lucide-react";
 import { StudentExamPrep } from "@/components/features/exam-prep/StudentExamPrep";
 import { TeacherExamPrep } from "@/components/features/exam-prep/TeacherExamPrep";
 import type { SubjectOption, UserRole } from "@/components/features/exam-prep/types";
@@ -21,7 +17,6 @@ const fallbackSubjects: SubjectOption[] = [
 ];
 
 export default function ExamPrepPage() {
-  const router = useRouter();
   const { isOpen } = useSidebarStore();
   const { projects, setProjects, setLoading, isLoading } = useProjectStore();
   const [isInitialLoading, setIsInitialLoading] = useState(true);

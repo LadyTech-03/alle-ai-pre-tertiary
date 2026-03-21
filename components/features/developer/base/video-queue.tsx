@@ -19,7 +19,7 @@ import {
   Trash2,
   Film,
   Play,
-  Loader2,
+  Loader,
   CodeXml,
   ArrowBigDownDash,
 } from "lucide-react";

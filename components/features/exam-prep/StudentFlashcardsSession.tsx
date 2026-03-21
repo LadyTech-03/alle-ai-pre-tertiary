@@ -16,7 +16,7 @@ import {
 import {
   CheckCircle2,
   Lightbulb,
-  Loader2,
+  Loader,
 } from "lucide-react";
 import {
   applySm2Rating,
@@ -593,14 +593,14 @@ export function StudentFlashcardsSession({
           {isFinishing ? (
             <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-borderColorPrimary bg-background">
               <div className="text-center text-sm text-muted-foreground">
-                <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                <Loader className="mx-auto mb-2 h-5 w-5 animate-spin" />
                 Wrapping up session...
               </div>
             </div>
           ) : isWaiting || !currentQuestion ? (
             <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-borderColorPrimary bg-background">
               <div className="text-center text-sm text-muted-foreground">
-                <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                <Loader className="mx-auto mb-2 h-5 w-5 animate-spin" />
                 Loading flashcard...
               </div>
             </div>

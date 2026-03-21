@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader } from "lucide-react";
 
 export const ProcessingAnimation = () => {
   // Shared duration for synchronization
@@ -40,7 +40,7 @@ export const ProcessingAnimation = () => {
             ease: "linear",
           }}
         >
-          <Loader2 className="w-6 h-6 text-primary" />
+          <Loader className="w-6 h-6 text-primary" />
         </motion.div>
       </div>
 
