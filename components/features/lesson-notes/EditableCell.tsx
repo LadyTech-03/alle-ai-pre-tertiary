@@ -76,23 +76,22 @@ export function EditableCell({
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder={placeholder}
-            className="min-h-[96px]"
+            className="min-h-[96px] focus-visible:outline-none focus:border-borderColorPrimary"
           />
         ) : (
           <Input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder={placeholder}
+            className="focus-visible:outline-none focus:border-borderColorPrimary"
           />
         )}
         <div className="flex items-center gap-2">
-          <Button type="button" size="sm" onClick={handleSave}>
-            <Check className="mr-1 h-3 w-3" />
-            Save
+          <Button size="sm" variant='success2' onClick={handleSave}>
+            <Check className="w-4 h-4" />
           </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={handleCancel}>
-            <X className="mr-1 h-3 w-3" />
-            Cancel
+          <Button size="sm" variant="destructive" onClick={handleCancel}>
+            <X className="w-4 h-4" />
           </Button>
         </div>
       </div>

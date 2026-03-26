@@ -64,7 +64,7 @@ export default function LessonNotesPage() {
   const [subjectId, setSubjectId] = useState("");
   const [title, setTitle] = useState("");
   const [meetingDays, setMeetingDays] = useState<MeetingDayRow[]>([
-    { day: "monday", durationValue: "2" },
+    { day: "monday", durationValue: "" },
   ]);
   const [durationUnit, setDurationUnit] = useState<DurationUnit>("hours");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -165,6 +165,7 @@ export default function LessonNotesPage() {
       });
       setDraft(String(response.id), response);
       toast.success("Lesson note request created.");
+      console.log(response, 'Lesson note response');
       router.push(`/lesson-notes/${response.id}`);
     } catch {
       toast.error("Failed to create lesson note.");
@@ -190,7 +191,6 @@ export default function LessonNotesPage() {
               <CardHeader>
                 <CardTitle className="text-xl">Lesson Notes</CardTitle>
                 <CardDescription>
-                  Generate lesson notes by subject and meeting schedule.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -225,7 +225,6 @@ export default function LessonNotesPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <Label className="text-xs text-muted-foreground">Meeting Days</Label>
-                    <p className="text-xs text-muted-foreground">Add the timetable for this subject.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="inline-flex rounded-lg border border-borderColorPrimary bg-background p-1">

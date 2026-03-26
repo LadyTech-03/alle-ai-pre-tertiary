@@ -5,6 +5,22 @@ export interface LessonMeetingDay {
   duration: string;
 }
 
+export interface LessonNoteBodyHeader {
+  class?: string;
+  subject?: string;
+  week_number?: string;
+  week_ending?: string;
+  class_size?: string;
+  duration?: string;
+  teacher_name?: string;
+  school?: string;
+  district?: string;
+}
+
+export interface LessonNoteBody {
+  header?: LessonNoteBodyHeader;
+}
+
 export interface CreateLessonNotePayload {
   organisationId: number | string;
   courseUuid: string;
@@ -19,7 +35,7 @@ export interface LessonNoteResponse {
   title?: string;
   required_sections?: Record<string, unknown>;
   topics?: string[] | null;
-  body?: string | null;
+  body?: LessonNoteBody | null;
   status?: string | null;
   course_uuid?: string;
   week_start?: string | null;
@@ -35,6 +51,12 @@ export interface LessonNoteApiResponse {
   status?: boolean;
   message?: string;
   data?: LessonNoteResponse;
+}
+
+export interface LessonNoteSectionPayload {
+  organisationId: number | string;
+  noteId: number | string;
+  section: "header" | "curriculum_links" | "resources" | "core_competencies" | "daily_plans";
 }
 
 export const lessonNotesApi = {
@@ -54,5 +76,15 @@ export const lessonNotesApi = {
     }
 
     return responseData as LessonNoteResponse;
+  },
+  generateSection: async (payload: LessonNoteSectionPayload): Promise<LessonNoteResponse> => {
+    const response = await api.post<LessonNoteApiResponse>(
+      `/organisations/${payload.organisationId}/lesson-note/${payload.noteId}/section`,
+      {
+        section: payload.section,
+      }
+    );
+
+    return response.data?.data ?? ({} as LessonNoteResponse);
   },
 };

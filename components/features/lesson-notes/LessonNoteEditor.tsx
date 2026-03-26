@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LessonNoteCurriculumSection } from "./LessonNoteCurriculumSection";
@@ -18,10 +18,21 @@ import {
 interface LessonNoteEditorProps {
   initialNote: LessonNoteData;
   onBack?: () => void;
+  onGenerateHeader?: () => void;
+  isGeneratingHeader?: boolean;
 }
 
-export function LessonNoteEditor({ initialNote, onBack }: LessonNoteEditorProps) {
+export function LessonNoteEditor({
+  initialNote,
+  onBack,
+  onGenerateHeader,
+  isGeneratingHeader,
+}: LessonNoteEditorProps) {
   const [note, setNote] = useState<LessonNoteData>(initialNote);
+
+  useEffect(() => {
+    setNote(initialNote);
+  }, [initialNote]);
 
   const updateHeader = (key: keyof LessonNoteHeaderData, value: string) => {
     setNote((prev) => ({
@@ -72,22 +83,32 @@ export function LessonNoteEditor({ initialNote, onBack }: LessonNoteEditorProps)
       <CardHeader className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lesson Note</p>
             <CardTitle className="text-xl text-foreground">{note.title}</CardTitle>
             <CardDescription className="text-xs">
-              {note.header.subject} - {note.header.classGroup} - Week {note.header.weekNumber}
             </CardDescription>
           </div>
-          {onBack ? (
+          {/* {onBack ? (
             <Button variant="outline" size="sm" onClick={onBack}>
               Back to Lesson Notes
             </Button>
-          ) : null}
+          ) : null} */}
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-foreground">Lesson Header</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-foreground">Lesson Header</h3>
+            {onGenerateHeader ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onGenerateHeader}
+                disabled={isGeneratingHeader}
+              >
+                {isGeneratingHeader ? "Generating..." : "Generate Header"}
+              </Button>
+            ) : null}
+          </div>
           <LessonNoteHeaderTable data={note.header} onUpdate={updateHeader} />
         </div>
 

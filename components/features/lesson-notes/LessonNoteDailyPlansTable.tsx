@@ -25,7 +25,6 @@ export function LessonNoteDailyPlansTable({ plans, onUpdatePlan }: LessonNoteDai
           <div className="border-r border-borderColorPrimary p-3">
             <div className="space-y-3">
               <div>
-                <p className={sectionTitleStyles}>Day</p>
                 <EditableCell
                   value={plan.day}
                   onSave={(value) =>
@@ -34,7 +33,7 @@ export function LessonNoteDailyPlansTable({ plans, onUpdatePlan }: LessonNoteDai
                   placeholder="Day"
                 />
               </div>
-              <div>
+              {/* <div>
                 <p className={sectionTitleStyles}>Strand</p>
                 <EditableCell
                   value={plan.strand}
@@ -43,8 +42,8 @@ export function LessonNoteDailyPlansTable({ plans, onUpdatePlan }: LessonNoteDai
                   }
                   placeholder="Strand"
                 />
-              </div>
-              <div>
+              </div> */}
+              {/* <div>
                 <p className={sectionTitleStyles}>Sub-strand</p>
                 <EditableCell
                   value={plan.subStrand}
@@ -53,7 +52,7 @@ export function LessonNoteDailyPlansTable({ plans, onUpdatePlan }: LessonNoteDai
                   }
                   placeholder="Sub-strand"
                 />
-              </div>
+              </div> */}
             </div>
           </div>
           <div className="border-r border-borderColorPrimary p-3">
