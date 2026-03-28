@@ -84,7 +84,7 @@ export function LessonNoteDailyPlansTable({ plans, onUpdatePlan }: LessonNoteDai
                   placeholder="Add main lesson content"
                 />
               </div>
-              <div>
+              {/* <div>
                 <p className={sectionTitleStyles}>Key Points</p>
                 <EditableCell
                   value={plan.phases.keyPoints}
@@ -97,8 +97,8 @@ export function LessonNoteDailyPlansTable({ plans, onUpdatePlan }: LessonNoteDai
                   }
                   placeholder="Add key points"
                 />
-              </div>
-              <div>
+              </div> */}
+              {/* <div>
                 <p className={sectionTitleStyles}>Content Details</p>
                 <EditableCell
                   value={plan.phases.contentDetails}
@@ -111,7 +111,7 @@ export function LessonNoteDailyPlansTable({ plans, onUpdatePlan }: LessonNoteDai
                   }
                   placeholder="Add content details"
                 />
-              </div>
+              </div> */}
             </div>
           </div>
           <div className="p-3">
